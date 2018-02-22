@@ -618,10 +618,16 @@ int CYSF2DMR::run()
 
 unsigned int CYSF2DMR::findYSFID(std::string cs)
 {
+	std::string cstrim;
+
 	size_t first = cs.find_first_not_of(' ');
+	size_t mid = cs.find_last_of('-');
 	size_t last = cs.find_last_not_of(' ');
 
-	std::string cstrim = cs.substr(first, (last - first + 1));
+	if (mid == -1)
+		cstrim = cs.substr(first, (last - first + 1));
+	else
+		cstrim = cs.substr(first, (mid - first));
 
 	unsigned int id = m_lookup->findID(cstrim);
 
