@@ -232,22 +232,21 @@ int CYSF2DMR::run()
 
 					CYSFPayload ysfPayload;
 
-					if (fi == YSF_FI_HEADER) {
-						if (ysfPayload.processHeaderData(buffer + 35U)) {
-							std::string ysfSrc = ysfPayload.getSource();
-							std::string ysfDst = ysfPayload.getDest();
-							LogMessage("Received YSF Header: Src: %s Dst: %s", ysfSrc.c_str(), ysfDst.c_str());
-							m_srcid = findYSFID(ysfSrc);
-							m_conv.putYSFHeader();
-						}
-					} else if (fi == YSF_FI_TERMINATOR) {
-						LogMessage("YSF received end of voice transmission");
-						m_conv.putYSFEOT();
-					} else if (fi == YSF_FI_COMMUNICATIONS) {
-						if (dt == YSF_DT_VD_MODE2)
+					if (dt == YSF_DT_VD_MODE2) {
+						if (fi == YSF_FI_HEADER) {
+							if (ysfPayload.processHeaderData(buffer + 35U)) {
+								std::string ysfSrc = ysfPayload.getSource();
+								std::string ysfDst = ysfPayload.getDest();
+								LogMessage("Received YSF Header: Src: %s Dst: %s", ysfSrc.c_str(), ysfDst.c_str());
+								m_srcid = findYSFID(ysfSrc);
+								m_conv.putYSFHeader();
+							}
+						} else if (fi == YSF_FI_TERMINATOR) {
+							LogMessage("YSF received end of voice transmission");
+							m_conv.putYSFEOT();
+						} else if (fi == YSF_FI_COMMUNICATIONS) {
 							m_conv.putYSF(buffer + 35U);
-						else if  (dt == YSF_DT_VD_MODE1)
-							LogMessage("YSF Mode V/D Type 1 not supported yet");
+						}
 					}
 				}
 			}
