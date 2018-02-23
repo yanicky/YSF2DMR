@@ -69,6 +69,8 @@ private:
 	unsigned char  m_dmrLastDT;
 	unsigned char  m_ysfFrame[200U];
 	unsigned char  m_dmrFrame[50U];
+	unsigned int   m_dmrFrames;
+	unsigned int   m_ysfFrames;
 	
 	bool createDMRNetwork();
 	unsigned int findYSFID(std::string cs);

@@ -78,7 +78,9 @@ CYSF2DMR::CYSF2DMR(const std::string& configFile) :
 m_callsign(),
 m_conf(configFile),
 m_dmrNetwork(NULL),
-m_dmrLastDT(0U)
+m_dmrLastDT(0U),
+m_dmrFrames(0U),
+m_ysfFrames(0U)
 {
 	::memset(m_ysfFrame, 0U, 200U);
 	::memset(m_dmrFrame, 0U, 50U);
@@ -240,12 +242,15 @@ int CYSF2DMR::run()
 								LogMessage("Received YSF Header: Src: %s Dst: %s", ysfSrc.c_str(), ysfDst.c_str());
 								m_srcid = findYSFID(ysfSrc);
 								m_conv.putYSFHeader();
+								m_ysfFrames = 0U;
 							}
 						} else if (fi == YSF_FI_TERMINATOR) {
-							LogMessage("YSF received end of voice transmission");
+							LogMessage("YSF received end of voice transmission, %.1f seconds", float(m_ysfFrames) / 10.0F);
 							m_conv.putYSFEOT();
+							m_ysfFrames = 0U;
 						} else if (fi == YSF_FI_COMMUNICATIONS) {
 							m_conv.putYSF(buffer + 35U);
+							m_ysfFrames++;
 						}
 					}
 				}
@@ -419,10 +424,11 @@ int CYSF2DMR::run()
 				networkWatchdog.start();
 
 				if(DataType == DT_TERMINATOR_WITH_LC) {
-					LogMessage("DMR received end of voice transmission");
+					LogMessage("DMR received end of voice transmission, %.1f seconds", float(m_dmrFrames) / 16.667F);
 					m_conv.putDMREOT();
 					m_dmrNetwork->reset(2U);
 					networkWatchdog.stop();
+					m_dmrFrames = 0U;
 				}
 
 				if((DataType == DT_VOICE_LC_HEADER) && (DataType != m_dmrLastDT)) {
@@ -434,12 +440,15 @@ int CYSF2DMR::run()
 
 					m_netSrc.resize(YSF_CALLSIGN_LENGTH, ' ');
 					m_netDst.resize(YSF_CALLSIGN_LENGTH, ' ');
+
+					m_dmrFrames = 0U;
 				}
 
 				if(DataType == DT_VOICE_SYNC || DataType == DT_VOICE) {
 					unsigned char dmr_frame[50];
 					tx_dmrdata.getData(dmr_frame);
 					m_conv.putDMR(dmr_frame); // Add DMR frame for YSF conversion
+					m_dmrFrames++;
 				}
 			}
 			else {
@@ -447,13 +456,15 @@ int CYSF2DMR::run()
 					unsigned char dmr_frame[50];
 					tx_dmrdata.getData(dmr_frame);
 					m_conv.putDMR(dmr_frame); // Add DMR frame for YSF conversion
+					m_dmrFrames++;
 				}
 
 				networkWatchdog.clock(ms);
 				if (networkWatchdog.hasExpired()) {
-					LogDebug("Network watchdog has expired");
+					LogDebug("Network watchdog has expired, %.1f seconds", float(m_dmrFrames) / 16.667F);
 					m_dmrNetwork->reset(2U);
 					networkWatchdog.stop();
+					m_dmrFrames = 0U;
 				}
 			}
 			
