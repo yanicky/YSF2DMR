@@ -52,6 +52,7 @@ private:
 
 	unsigned char* m_lastData;
 	unsigned int   m_lastDataLength;
+	bool           m_lastDataValid;
 };
 
 #endif

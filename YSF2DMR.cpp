@@ -29,18 +29,9 @@
 #include <pwd.h>
 #endif
 
-// Sample of DT1 and DT2 from my radio, GPS info + more data, I need to investigate this...
-//const unsigned char dt1_temp[] = {0x34, 0x22, 0x62, 0x5F, 0x24, 0x53, 0x39, 0x54, 0x38, 0x38};
-//const unsigned char dt2_temp[] = {0x52, 0x65, 0x2A, 0x3E, 0x6C, 0x22, 0x30, 0x20, 0x03, 0x8B};
-
-// DT1 and DT2 from my radio, Data without GPS info...
-const unsigned char dt1_temp[] = {0x31, 0x22, 0x62, 0x5F, 0x29, 0x00, 0x00, 0x00, 0x00, 0x00};
-const unsigned char dt2_temp[] = {0x00, 0x00, 0x00, 0x00, 0x6C, 0x20, 0x1C, 0x20, 0x03, 0x08};
-
-
-const unsigned char dmrFrameSilence[] = {0xB9U, 0xE8U, 0x81U, 0x52U, 0x61U, 0x73U, 0x00U, 0x2AU, 0x6BU, 0xB9U, 0xE8U,
-										0x81U, 0x52U, 0x60U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x01U, 0x73U, 0x00U,
-										0x2AU, 0x6BU, 0xB9U, 0xE8U, 0x81U, 0x52U, 0x61U, 0x73U, 0x00U, 0x2AU, 0x6BU};
+// "NO GPS" info for DT1 and DT2, suggested by Marius YO2LOJ
+const unsigned char dt1_temp[] = {0x34, 0x22, 0x61, 0x5F, 0x28, 0x20, 0x20, 0x20, 0x20, 0x20};
+const unsigned char dt2_temp[] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x03, 0xE1};
 
 #define DMR_FRAME_PER       55U
 #define YSF_FRAME_PER       90U
@@ -105,7 +96,9 @@ m_dmrLastDT(0U),
 m_gps(NULL),
 m_dtmf(NULL),
 m_exclude(false),
-m_APRS(NULL)
+m_APRS(NULL),
+m_dmrFrames(0U),
+m_ysfFrames(0U)
 {
 	::memset(m_ysfFrame, 0U, 200U);
 	::memset(m_dmrFrame, 0U, 50U);
@@ -375,22 +368,24 @@ int CYSF2DMR::run()
 						if ((::memcmp(buffer, "YSFD", 4U) == 0U) && !m_exclude) {
 							CYSFPayload ysfPayload;
 
-							if (fi == YSF_FI_HEADER) {
-								if (ysfPayload.processHeaderData(buffer + 35U)) {
-									std::string ysfSrc = ysfPayload.getSource();
-									std::string ysfDst = ysfPayload.getDest();
-									LogMessage("Received YSF Header: Src: %s Dst: %s", ysfSrc.c_str(), ysfDst.c_str());
-									m_srcid = findYSFID(ysfSrc);
-									m_conv.putYSFHeader();
-								}
-							} else if (fi == YSF_FI_TERMINATOR) {
-								LogMessage("YSF received end of voice transmission");
-								m_conv.putYSFEOT();
-							} else if (fi == YSF_FI_COMMUNICATIONS) {
-								if (dt == YSF_DT_VD_MODE2)
+							if (dt == YSF_DT_VD_MODE2) {
+								if (fi == YSF_FI_HEADER) {
+									if (ysfPayload.processHeaderData(buffer + 35U)) {
+										std::string ysfSrc = ysfPayload.getSource();
+										std::string ysfDst = ysfPayload.getDest();
+										LogMessage("Received YSF Header: Src: %s Dst: %s", ysfSrc.c_str(), ysfDst.c_str());
+										m_srcid = findYSFID(ysfSrc);
+										m_conv.putYSFHeader();
+										m_ysfFrames = 0U;
+									}
+								} else if (fi == YSF_FI_TERMINATOR) {
+									LogMessage("YSF received end of voice transmission, %.1f seconds", float(m_ysfFrames) / 10.0F);
+									m_conv.putYSFEOT();
+									m_ysfFrames = 0U;
+								} else if (fi == YSF_FI_COMMUNICATIONS) {
 									m_conv.putYSF(buffer + 35U);
-								else if  (dt == YSF_DT_VD_MODE1)
-									LogMessage("YSF Mode V/D Type 1 not supported yet");						
+									m_ysfFrames++;
+								}
 							}
 						}
 						break;
@@ -651,11 +646,12 @@ int CYSF2DMR::run()
 				networkWatchdog.start();
 
 				if(DataType == DT_TERMINATOR_WITH_LC) {
-					LogMessage("DMR received end of voice transmission");
+					LogMessage("DMR received end of voice transmission, %.1f seconds", float(m_dmrFrames) / 16.667F);
 					if (SrcId==4000) unlink_received=1;
 					m_conv.putDMREOT();
 					m_dmrNetwork->reset(2U);
 					networkWatchdog.stop();
+					m_dmrFrames = 0U;
 				}
 
 				if((DataType == DT_VOICE_LC_HEADER) && (DataType != m_dmrLastDT)) {
@@ -688,12 +684,15 @@ int CYSF2DMR::run()
 
 					m_netSrc.resize(YSF_CALLSIGN_LENGTH, ' ');
 					m_netDst.resize(YSF_CALLSIGN_LENGTH, ' ');
+					
+					m_dmrFrames = 0U;
 				}
 
 				if(DataType == DT_VOICE_SYNC || DataType == DT_VOICE) {
 					unsigned char dmr_frame[50];
 					tx_dmrdata.getData(dmr_frame);
 					m_conv.putDMR(dmr_frame); // Add DMR frame for YSF conversion
+					m_dmrFrames++;
 				}
 			}
 			else {
@@ -701,13 +700,15 @@ int CYSF2DMR::run()
 					unsigned char dmr_frame[50];
 					tx_dmrdata.getData(dmr_frame);
 					m_conv.putDMR(dmr_frame); // Add DMR frame for YSF conversion
+					m_dmrFrames++;
 				}
 
 				networkWatchdog.clock(ms);
 				if (networkWatchdog.hasExpired()) {
-					LogDebug("Network watchdog has expired");
+					LogDebug("Network watchdog has expired, %.1f seconds", float(m_dmrFrames) / 16.667F);
 					m_dmrNetwork->reset(2U);
 					networkWatchdog.stop();
+					m_dmrFrames = 0U;
 				}
 			}
 			
@@ -722,7 +723,7 @@ int CYSF2DMR::run()
 
 				::memcpy(m_ysfFrame + 0U, "YSFD", 4U);
 				::memcpy(m_ysfFrame + 4U, m_ysfNetwork->getCallsign().c_str(), YSF_CALLSIGN_LENGTH);
-				::memcpy(m_ysfFrame + 14U, m_ysfNetwork->getCallsign().c_str(), YSF_CALLSIGN_LENGTH);
+				::memcpy(m_ysfFrame + 14U, m_netSrc.c_str(), YSF_CALLSIGN_LENGTH);
 				::memcpy(m_ysfFrame + 24U, "ALL       ", YSF_CALLSIGN_LENGTH);
 				m_ysfFrame[34U] = 0U; // Net frame counter
 
@@ -743,7 +744,7 @@ int CYSF2DMR::run()
 
 				unsigned char csd1[20U], csd2[20U];
 				memset(csd1, '*', YSF_CALLSIGN_LENGTH);
-				memcpy(csd1 + YSF_CALLSIGN_LENGTH, m_ysfNetwork->getCallsign().c_str(), YSF_CALLSIGN_LENGTH);
+				memcpy(csd1 + YSF_CALLSIGN_LENGTH, m_netSrc.c_str(), YSF_CALLSIGN_LENGTH);
 				memset(csd2, ' ', YSF_CALLSIGN_LENGTH + YSF_CALLSIGN_LENGTH);
 
 				CYSFPayload payload;
@@ -757,7 +758,7 @@ int CYSF2DMR::run()
 			else if (ysfFrameType == TAG_EOT) {
 				::memcpy(m_ysfFrame + 0U, "YSFD", 4U);
 				::memcpy(m_ysfFrame + 4U, m_ysfNetwork->getCallsign().c_str(), YSF_CALLSIGN_LENGTH);
-				::memcpy(m_ysfFrame + 14U, m_ysfNetwork->getCallsign().c_str(), YSF_CALLSIGN_LENGTH);
+				::memcpy(m_ysfFrame + 14U, m_netSrc.c_str(), YSF_CALLSIGN_LENGTH);
 				::memcpy(m_ysfFrame + 24U, "ALL       ", YSF_CALLSIGN_LENGTH);
 				m_ysfFrame[34U] = ysf_cnt; // Net frame counter
 
@@ -778,7 +779,7 @@ int CYSF2DMR::run()
 
 				unsigned char csd1[20U], csd2[20U];
 				memset(csd1, '*', YSF_CALLSIGN_LENGTH);
-				memcpy(csd1 + YSF_CALLSIGN_LENGTH, m_ysfNetwork->getCallsign().c_str(), YSF_CALLSIGN_LENGTH);
+				memcpy(csd1 + YSF_CALLSIGN_LENGTH, m_netSrc.c_str(), YSF_CALLSIGN_LENGTH);
 				memset(csd2, ' ', YSF_CALLSIGN_LENGTH + YSF_CALLSIGN_LENGTH);
 
 				CYSFPayload payload;
@@ -794,7 +795,7 @@ int CYSF2DMR::run()
 
 				::memcpy(m_ysfFrame + 0U, "YSFD", 4U);
 				::memcpy(m_ysfFrame + 4U, m_ysfNetwork->getCallsign().c_str(), YSF_CALLSIGN_LENGTH);
-				::memcpy(m_ysfFrame + 14U, m_ysfNetwork->getCallsign().c_str(), YSF_CALLSIGN_LENGTH);
+				::memcpy(m_ysfFrame + 14U, m_netSrc.c_str(), YSF_CALLSIGN_LENGTH);
 				::memcpy(m_ysfFrame + 24U, "ALL       ", YSF_CALLSIGN_LENGTH);
 
 				// Add the YSF Sync
@@ -974,7 +975,7 @@ void CYSF2DMR::SendDummy(unsigned int srcid,unsigned int dstid, FLCO dmr_flco) {
 			rx_dmrdata.setRSSI(0U);
 			rx_dmrdata.setDataType(DT_VOICE);
 
-			::memcpy(m_dmrFrame, dmrFrameSilence, DMR_FRAME_LENGTH_BYTES);
+			::memcpy(m_dmrFrame, DMR_SILENCE_DATA, DMR_FRAME_LENGTH_BYTES);
 
 			// Generate the Embedded LC
 			unsigned char lcss = m_EmbeddedLC.getData(m_dmrFrame, n_dmr);
@@ -1024,16 +1025,22 @@ void CYSF2DMR::SendDummy(unsigned int srcid,unsigned int dstid, FLCO dmr_flco) {
 
 unsigned int CYSF2DMR::findYSFID(std::string cs)
 {
+	std::string cstrim;
+
 	size_t first = cs.find_first_not_of(' ');
+	size_t mid = cs.find_last_of('-');
 	size_t last = cs.find_last_not_of(' ');
 
-	std::string cstrim = cs.substr(first, (last - first + 1));
+	if (mid == -1)
+		cstrim = cs.substr(first, (last - first + 1));
+	else
+		cstrim = cs.substr(first, (mid - first));
 
 	unsigned int id = m_lookup->findID(cstrim);
 
 	if (id == 0) {
-		id = 0; 
-		LogMessage("Not DMR ID found, Packet discarded, DstID: %s %u", m_dmrpc ? "" : "TG", m_dstid);
+		id = m_defsrcid;
+		LogMessage("Not DMR ID found, using default ID: %u, DstID: %s %u", id, m_dmrpc ? "" : "TG", m_dstid);
 	}
 	else
 		LogMessage("DMR ID of %s: %u, DstID: %s %u", cstrim.c_str(), id, m_dmrpc ? "" : "TG", m_dstid);

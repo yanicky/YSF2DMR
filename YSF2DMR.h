@@ -90,6 +90,8 @@ private:
 	CDTMF*         m_dtmf;
 	bool		   m_exclude;
 	CAPRSReader*   m_APRS;
+	unsigned int   m_dmrFrames;
+	unsigned int   m_ysfFrames;
 	
 	bool createDMRNetwork();
     void createGPS();
