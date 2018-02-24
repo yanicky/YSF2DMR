@@ -39,9 +39,21 @@
 #include "Sync.h"
 #include "Utils.h"
 #include "Conf.h"
+#include "DTMF.h"
+#include "GPS.h"
 #include "Log.h"
+#include "C4FM.h"  // nueva linea
+#include "CRC.h"  // nueva linea
+#include "APRSReader.h"
 
 #include <string>
+
+enum TG_STATUS {
+	NONE,
+	WAITING_UNLINK,
+	SEND_REPLY,
+	SEND_PTT
+};
 
 class CYSF2DMR
 {
@@ -54,6 +66,7 @@ public:
 private:
 	std::string    m_callsign;
 	CConf          m_conf;
+	C4FM*          m_C4FM;
 	CDMRNetwork*   m_dmrNetwork;
 	CYSFNetwork*   m_ysfNetwork;
 	CDMRLookup*    m_lookup;
@@ -63,16 +76,24 @@ private:
 	unsigned int   m_srcid;
 	unsigned int   m_defsrcid;
 	unsigned int   m_dstid;
+	unsigned int   next_dstid;	
 	bool           m_dmrpc;
 	std::string    m_netSrc;
 	std::string    m_netDst;
+	std::string    m_ysfSrc;
+	unsigned char*  m_command;
+	WXSI_STATUS    m_status;	
 	unsigned char  m_dmrLastDT;
 	unsigned char  m_ysfFrame[200U];
 	unsigned char  m_dmrFrame[50U];
-	unsigned int   m_dmrFrames;
-	unsigned int   m_ysfFrames;
+	CGPS*          m_gps;
+	CDTMF*         m_dtmf;
+	bool		   m_exclude;
+	CAPRSReader*   m_APRS;
 	
 	bool createDMRNetwork();
+    void createGPS();
+	void SendDummy(unsigned int srcid, unsigned int dstid, FLCO dmr_flco);	
 	unsigned int findYSFID(std::string cs);
 };
 

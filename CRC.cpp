@@ -228,6 +228,27 @@ bool CCRC::checkCCITT161(const unsigned char *in, unsigned int length)
 	return crc8[0U] == in[length - 2U] && crc8[1U] == in[length - 1U];
 }
 
+bool CCRC::checkCCITT16(const unsigned char *in, unsigned int length)
+{
+	assert(in != NULL);
+	assert(length > 2U);
+
+	union {
+		uint16_t crc16;
+		uint8_t  crc8[2U];
+	};
+
+	crc16 = 0U;
+
+	for (unsigned i = 0U; i < (length - 2U); i++)
+		crc16 = (uint16_t(crc8[0U]) << 8) ^ CCITT16_TABLE2[crc8[1U] ^ in[i]];
+
+	crc16 = ~crc16;
+
+	return crc8[0U] == in[length - 1U] && crc8[1U] == in[length - 2U];
+}
+
+
 unsigned char CCRC::crc8(const unsigned char *in, unsigned int length)
 {
 	assert(in != NULL);

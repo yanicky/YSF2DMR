@@ -1,5 +1,5 @@
 /*
-*   Copyright (C) 2018 by Jonathan Naylor G4KLX
+*   Copyright (C) 2016,2017 by Jonathan Naylor G4KLX
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -16,42 +16,36 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#if !defined(DELAYBUFFER_H)
-#define	DELAYBUFFER_H
+#if !defined(GPS_H)
+#define	GPS_H
 
-#include "RingBuffer.h"
-#include "StopWatch.h"
-#include "Defines.h"
-#include "Timer.h"
+#include "APRSWriter.h"
 
 #include <string>
 
-class CDelayBuffer {
+class CGPS {
 public:
-	CDelayBuffer(const std::string& name, unsigned int blockSize, unsigned int blockTime, unsigned int jitterTime, bool debug);
-	~CDelayBuffer();
+	CGPS(const std::string& callsign, const std::string& suffix, const std::string& password, const std::string& address, unsigned int port);
+	~CGPS();
 
-	bool addData(const unsigned char* data, unsigned int length);
+	void setInfo(unsigned int txFrequency, unsigned int rxFrequency, float latitude, float longitude, int height, const std::string& desc);
 
-	B_STATUS getData(unsigned char* data, unsigned int& length);
+	bool open();
 
-	void reset();
+	void data(const unsigned char* source, const unsigned char* data, unsigned char fi, unsigned char dt, unsigned char fn, unsigned char ft);
 
 	void clock(unsigned int ms);
 
-private:
-	std::string  m_name;
-	unsigned int m_blockSize;
-	unsigned int m_blockTime;
-	bool         m_debug;
-	CTimer       m_timer;
-	CStopWatch   m_stopWatch;
-	bool         m_running;
-	CRingBuffer<unsigned char> m_buffer;
-	unsigned int m_outputCount;
+	void reset();
 
-	unsigned char* m_lastData;
-	unsigned int   m_lastDataLength;
+	void close();
+
+private:
+	CAPRSWriter    m_writer;
+	unsigned char* m_buffer;
+	bool           m_sent;
+
+	void transmitGPS(const unsigned char* source);
 };
 
 #endif

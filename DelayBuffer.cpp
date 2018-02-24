@@ -17,7 +17,6 @@
 */
 
 #include "DelayBuffer.h"
-#include "DMRDefines.h"
 
 #include "Log.h"
 
@@ -33,11 +32,10 @@ m_debug(debug),
 m_timer(1000U, 0U, jitterTime),
 m_stopWatch(),
 m_running(false),
-m_buffer(5000U, name.c_str()),
+m_buffer(1000U, name.c_str()),
 m_outputCount(0U),
 m_lastData(NULL),
-m_lastDataLength(0U),
-m_lastDataValid(false)
+m_lastDataLength(0U)
 {
 	assert(blockSize > 0U);
 	assert(blockTime > 0U);
@@ -65,8 +63,7 @@ bool CDelayBuffer::addData(const unsigned char* data, unsigned int length)
 	m_buffer.addData(data, length);
 
 	if (!m_timer.isRunning()) {
-		if (m_debug)
-			LogDebug("%s, DelayBuffer: starting the timer from append", m_name.c_str());
+		LogDebug("%s, DelayBuffer: starting the timer from append", m_name.c_str());
 		m_timer.start();
 	}
 
@@ -88,42 +85,23 @@ B_STATUS CDelayBuffer::getData(unsigned char* data, unsigned int& length)
 		if (m_debug)
 			LogDebug("%s, DelayBuffer: returning data, elapsed=%ums", m_name.c_str(), m_stopWatch.elapsed());
 
-		if (m_buffer.getData(data, m_blockSize)) {
-			length = m_blockSize;
+		length = m_buffer.getData(data, m_blockSize);
 
-			// Save this data in case no more data is available next time
-			::memcpy(m_lastData, data, length);
-			m_lastDataLength = length;
-			m_lastDataValid = true;
+		// Save this data in case no more data is available next time
+		::memcpy(m_lastData, data, length);
+		m_lastDataLength = length;
 
-			m_outputCount++;
+		m_outputCount++;
 
-			return BS_DATA;
-		}
+		return BS_DATA;
 	}
 
-	if (m_debug)
-		LogDebug("%s, DelayBuffer: no data available, elapsed=%ums", m_name.c_str(), m_stopWatch.elapsed());
+	LogDebug("%s, DelayBuffer: no data available, elapsed=%ums", m_name.c_str(), m_stopWatch.elapsed());
 
 	// Return the last data frame if we have it
 	if (m_lastDataLength > 0U) {
-		if(m_lastDataValid) {
-			if (m_debug)
-				LogDebug("%s, DelayBuffer: returning the last received frame", m_name.c_str());
-			// Copy last valid data
-			::memcpy(data, m_lastData, m_lastDataLength);
-		} else {
-			if (m_debug)
-				LogDebug("%s, DelayBuffer: returning a silence frame", m_name.c_str());
-			// Copy last network header data
-			::memcpy(data, m_lastData, 20U);
-			// We only need to copy silence AMBE data, don't care about LC data for next YSF conversion stage
-			::memcpy(data + 20U, DMR_SILENCE_DATA, 33U);
-			data[53U] = 0U;
-			data[54U] = 0U; 
-		}
-
-		m_lastDataValid = false;
+		LogDebug("%s, DelayBuffer: returning the last received frame", m_name.c_str());
+		::memcpy(data, m_lastData, m_lastDataLength);
 		length = m_lastDataLength;
 
 		m_outputCount++;

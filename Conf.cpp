@@ -33,7 +33,8 @@ enum SECTION {
   SECTION_YSF_NETWORK,
   SECTION_DMR_NETWORK,
   SECTION_DMRID_LOOKUP,
-  SECTION_LOG
+  SECTION_LOG,
+  SECTION_APRS_FI
 };
 
 CConf::CConf(const std::string& file) :
@@ -62,13 +63,22 @@ m_dmrNetworkLocal(0U),
 m_dmrNetworkPassword(),
 m_dmrNetworkOptions(),
 m_dmrNetworkDebug(false),
+m_dmrNetworkJitterEnabled(true),
 m_dmrNetworkJitter(500U),
+m_dmrNetworkSendDiscon(true),
 m_dmrIdLookupFile(),
 m_dmrIdLookupTime(0U),
 m_logDisplayLevel(0U),
 m_logFileLevel(0U),
 m_logFilePath(),
-m_logFileRoot()
+m_logFileRoot(),
+m_aprsEnabled(false),
+m_aprsServer(),
+m_aprsPort(0U),
+m_aprsPassword(),
+m_aprsAPIKey(),
+m_aprsRefresh(120),
+m_aprsDescription()
 {
 }
 
@@ -102,6 +112,8 @@ bool CConf::read()
 		  section = SECTION_DMRID_LOOKUP;
 	  else if (::strncmp(buffer, "[Log]", 5U) == 0)
 		  section = SECTION_LOG;
+	  else if (::strncmp(buffer, "[aprs.fi]", 5U) == 0)
+		  section = SECTION_APRS_FI;	  
 	  else
         section = SECTION_NONE;
 
@@ -167,8 +179,12 @@ bool CConf::read()
 			m_dmrNetworkOptions = value;
 		else if (::strcmp(key, "Debug") == 0)
 			m_dmrNetworkDebug = ::atoi(value) == 1;
+		else if (::strcmp(key, "JitterEnabled") == 0)
+			m_dmrNetworkJitterEnabled = ::atoi(value) == 1;
 		else if (::strcmp(key, "Jitter") == 0)
 			m_dmrNetworkJitter = (unsigned int)::atoi(value);
+		else if (::strcmp(key, "SendDiscon") == 0)
+			m_dmrNetworkSendDiscon = ::atoi(value) == 1;		
 	} else if (section == SECTION_DMRID_LOOKUP) {
 		if (::strcmp(key, "File") == 0)
 			m_dmrIdLookupFile = value;
@@ -183,6 +199,21 @@ bool CConf::read()
 			m_logFileLevel = (unsigned int)::atoi(value);
 		else if (::strcmp(key, "DisplayLevel") == 0)
 			m_logDisplayLevel = (unsigned int)::atoi(value);
+	} else if (section == SECTION_APRS_FI) {
+		if (::strcmp(key, "Enable") == 0)
+			m_aprsEnabled = ::atoi(value) == 1;
+		else if (::strcmp(key, "Server") == 0)
+			m_aprsServer = value;
+		else if (::strcmp(key, "Port") == 0)
+			m_aprsPort = (unsigned int)::atoi(value);	
+		else if (::strcmp(key, "Password") == 0)
+			m_aprsPassword = value;
+		else if (::strcmp(key, "APIKey") == 0)
+			m_aprsAPIKey = value;
+		else if (::strcmp(key, "Refresh") == 0)
+			m_aprsRefresh = (unsigned int)::atoi(value);		
+		else if (::strcmp(key, "Description") == 0)
+			m_aprsDescription = value;	
 	}
   }
 
@@ -281,6 +312,41 @@ bool CConf::getDMRPC() const
 	return m_dmrPC;
 }
 
+bool CConf::getAPRSEnabled() const
+{
+	return m_aprsEnabled;
+}
+
+std::string CConf::getAPRSServer() const
+{
+	return m_aprsServer;
+}
+
+unsigned int CConf::getAPRSPort() const
+{
+	return m_aprsPort;
+}
+
+std::string CConf::getAPRSPassword() const
+{
+	return m_aprsPassword;
+}
+
+std::string CConf::getAPRSAPIKey() const
+{
+	return m_aprsAPIKey;
+}
+
+unsigned int CConf::getAPRSRefresh() const
+{
+	return m_aprsRefresh;
+}
+
+std::string CConf::getAPRSDescription() const
+{
+	return m_aprsDescription;
+}
+
 std::string CConf::getDMRNetworkAddress() const
 {
 	return m_dmrNetworkAddress;
@@ -311,9 +377,19 @@ bool CConf::getDMRNetworkDebug() const
 	return m_dmrNetworkDebug;
 }
 
+bool CConf::getDMRNetworkJitterEnabled() const
+{
+	return m_dmrNetworkJitterEnabled;
+}
+
 unsigned int CConf::getDMRNetworkJitter() const
 {
 	return m_dmrNetworkJitter;
+}
+
+bool CConf::getDMRNetworkSendDiscon() const
+{
+	return m_dmrNetworkSendDiscon;
 }
 
 std::string CConf::getDMRIdLookupFile() const

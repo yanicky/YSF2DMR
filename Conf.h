@@ -60,7 +60,9 @@ public:
   std::string  getDMRNetworkPassword() const;
   std::string  getDMRNetworkOptions() const;
   bool         getDMRNetworkDebug() const;
+  bool         getDMRNetworkJitterEnabled() const;
   unsigned int getDMRNetworkJitter() const;
+  bool         getDMRNetworkSendDiscon() const;
 
   // The DMR Id section
   std::string  getDMRIdLookupFile() const;
@@ -71,6 +73,15 @@ public:
   unsigned int getLogFileLevel() const;
   std::string  getLogFilePath() const;
   std::string  getLogFileRoot() const;
+
+  // The aprs.fi section
+  bool         getAPRSEnabled() const;
+  std::string  getAPRSServer() const;
+  unsigned int getAPRSPort() const;
+  std::string  getAPRSPassword() const;
+  std::string  getAPRSAPIKey() const;
+  unsigned int getAPRSRefresh() const;  
+  std::string  getAPRSDescription() const;  
 
 private:
   std::string  m_file;
@@ -100,7 +111,9 @@ private:
   std::string  m_dmrNetworkPassword;
   std::string  m_dmrNetworkOptions;
   bool         m_dmrNetworkDebug;
+  bool         m_dmrNetworkJitterEnabled;
   unsigned int m_dmrNetworkJitter;
+  bool		   m_dmrNetworkSendDiscon;
 
   std::string  m_dmrIdLookupFile;
   unsigned int m_dmrIdLookupTime;
@@ -109,6 +122,14 @@ private:
   unsigned int m_logFileLevel;
   std::string  m_logFilePath;
   std::string  m_logFileRoot;
+  
+  bool         m_aprsEnabled;
+  std::string  m_aprsServer;
+  unsigned int m_aprsPort;
+  std::string  m_aprsPassword;
+  std::string  m_aprsAPIKey;
+  unsigned int m_aprsRefresh;
+  std::string  m_aprsDescription;
 
 };
 
