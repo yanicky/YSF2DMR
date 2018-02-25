@@ -930,93 +930,49 @@ void CYSF2DMR::createGPS()
 
 void CYSF2DMR::SendDummyDMR(unsigned int srcid,unsigned int dstid, FLCO dmr_flco)
 {
-	CDMREmbeddedData m_EmbeddedLC;
-	CDMRData rx_dmrdata;
+	CDMRData dmrdata;
+	CDMRSlotType slotType;
+	CDMRFullLC fullLC;
+
 	int dmr_cnt = 0U;
 
-	rx_dmrdata.setSlotNo(2U);
-	rx_dmrdata.setSrcId(srcid);
-	rx_dmrdata.setDstId(dstid);
-	rx_dmrdata.setFLCO(dmr_flco);
-	rx_dmrdata.setN(0U);
-	rx_dmrdata.setSeqNo(0U);
-	rx_dmrdata.setBER(0U);
-	rx_dmrdata.setRSSI(0U);
-	rx_dmrdata.setDataType(DT_VOICE_LC_HEADER);
+	// Generate DMR LC for header and TermLC frames
+	CDMRLC dmrLC = CDMRLC(dmr_flco, srcid, dstid);
+
+	// Build DMR header
+	dmrdata.setSlotNo(2U);
+	dmrdata.setSrcId(srcid);
+	dmrdata.setDstId(dstid);
+	dmrdata.setFLCO(dmr_flco);
+	dmrdata.setN(0U);
+	dmrdata.setSeqNo(0U);
+	dmrdata.setBER(0U);
+	dmrdata.setRSSI(0U);
+	dmrdata.setDataType(DT_VOICE_LC_HEADER);
 
 	// Add sync
 	CSync::addDMRDataSync(m_dmrFrame, 0);
 
 	// Add SlotType
-	CDMRSlotType slotType;
 	slotType.setColorCode(m_colorcode);
 	slotType.setDataType(DT_VOICE_LC_HEADER);
 	slotType.getData(m_dmrFrame);
 
 	// Full LC
-	CDMRLC dmrLC = CDMRLC(dmr_flco, srcid, dstid);
-	CDMRFullLC fullLC;
 	fullLC.encode(dmrLC, m_dmrFrame, DT_VOICE_LC_HEADER);
-	m_EmbeddedLC.setLC(dmrLC);
-	
-	rx_dmrdata.setData(m_dmrFrame);
-	//CUtils::dump(1U, "DMR data:", m_dmrFrame, 33U);
 
+	dmrdata.setData(m_dmrFrame);
+
+	// Send DMR header
 	for (unsigned int i = 0U; i < 3U; i++) {
-		rx_dmrdata.setSeqNo(dmr_cnt);
-		m_dmrNetwork->write(rx_dmrdata);
+		dmrdata.setSeqNo(dmr_cnt);
+		m_dmrNetwork->write(dmrdata);
 		dmr_cnt++;
 	}
 
-	// EOT
-	unsigned int n_dmr = (dmr_cnt - 3U) % 6U;
-	unsigned int fill = (6U - n_dmr);
-	
-	if (n_dmr) {
-		for (unsigned int i = 0U; i < fill; i++) {
-
-			CDMREMB emb;
-			CDMRData rx_dmrdata;
-
-			rx_dmrdata.setSlotNo(2U);
-			rx_dmrdata.setSrcId(srcid);
-			rx_dmrdata.setDstId(dstid);
-			rx_dmrdata.setFLCO(dmr_flco);
-			rx_dmrdata.setN(n_dmr);
-			rx_dmrdata.setSeqNo(dmr_cnt);
-			rx_dmrdata.setBER(0U);
-			rx_dmrdata.setRSSI(0U);
-			rx_dmrdata.setDataType(DT_VOICE);
-
-			::memcpy(m_dmrFrame, DMR_SILENCE_DATA, DMR_FRAME_LENGTH_BYTES);
-
-			// Generate the Embedded LC
-			unsigned char lcss = m_EmbeddedLC.getData(m_dmrFrame, n_dmr);
-
-			// Generate the EMB
-			emb.setColorCode(m_colorcode);
-			emb.setLCSS(lcss);
-			emb.getData(m_dmrFrame);
-
-			rx_dmrdata.setData(m_dmrFrame);
-	
-			//CUtils::dump(1U, "DMR data:", m_dmrFrame, 33U);
-			m_dmrNetwork->write(rx_dmrdata);
-
-			n_dmr++;
-			dmr_cnt++;
-		}
-	}
-
-	rx_dmrdata.setSlotNo(2U);
-	rx_dmrdata.setSrcId(srcid);
-	rx_dmrdata.setDstId(dstid);
-	rx_dmrdata.setFLCO(dmr_flco);
-	rx_dmrdata.setN(n_dmr);
-	rx_dmrdata.setSeqNo(dmr_cnt);
-	rx_dmrdata.setBER(0U);
-	rx_dmrdata.setRSSI(0U);
-	rx_dmrdata.setDataType(DT_TERMINATOR_WITH_LC);
+	// Build DMR TermLC
+	dmrdata.setSeqNo(dmr_cnt);
+	dmrdata.setDataType(DT_TERMINATOR_WITH_LC);
 
 	// Add sync
 	CSync::addDMRDataSync(m_dmrFrame, 0);
@@ -1026,13 +982,13 @@ void CYSF2DMR::SendDummyDMR(unsigned int srcid,unsigned int dstid, FLCO dmr_flco
 	slotType.setDataType(DT_TERMINATOR_WITH_LC);
 	slotType.getData(m_dmrFrame);
 
-	// Full LC
-	dmrLC = CDMRLC(dmr_flco, srcid, dstid);
+	// Full LC for TermLC frame
 	fullLC.encode(dmrLC, m_dmrFrame, DT_TERMINATOR_WITH_LC);
 
-	rx_dmrdata.setData(m_dmrFrame);
-	//CUtils::dump(1U, "DMR data:", m_dmrFrame, 33U);
-	m_dmrNetwork->write(rx_dmrdata);
+	dmrdata.setData(m_dmrFrame);
+
+	// Send DMR TermLC
+	m_dmrNetwork->write(dmrdata);
 }
 
 unsigned int CYSF2DMR::findYSFID(std::string cs)
