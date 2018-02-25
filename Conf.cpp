@@ -66,7 +66,7 @@ m_dmrNetworkOptions(),
 m_dmrNetworkDebug(false),
 m_dmrNetworkJitterEnabled(true),
 m_dmrNetworkJitter(500U),
-m_dmrNetworkSendDiscon(true),
+m_dmrNetworkSendDisconnect(true),
 m_dmrIdLookupFile(),
 m_dmrIdLookupTime(0U),
 m_logDisplayLevel(0U),
@@ -184,8 +184,8 @@ bool CConf::read()
 			m_dmrNetworkJitterEnabled = ::atoi(value) == 1;
 		else if (::strcmp(key, "Jitter") == 0)
 			m_dmrNetworkJitter = (unsigned int)::atoi(value);
-		else if (::strcmp(key, "SendDiscon") == 0)
-			m_dmrNetworkSendDiscon = ::atoi(value) == 1;		
+		else if (::strcmp(key, "SendDisconnect") == 0)
+			m_dmrNetworkSendDisconnect = ::atoi(value) == 1;		
 	} else if (section == SECTION_DMRID_LOOKUP) {
 		if (::strcmp(key, "File") == 0)
 			m_dmrIdLookupFile = value;
@@ -388,9 +388,9 @@ unsigned int CConf::getDMRNetworkJitter() const
 	return m_dmrNetworkJitter;
 }
 
-bool CConf::getDMRNetworkSendDiscon() const
+bool CConf::getDMRNetworkSendDisconnect() const
 {
-	return m_dmrNetworkSendDiscon;
+	return m_dmrNetworkSendDisconnect;
 }
 
 std::string CConf::getDMRIdLookupFile() const

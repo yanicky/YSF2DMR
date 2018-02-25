@@ -247,13 +247,11 @@ int CYSF2DMR::run()
 	unsigned char ysf_cnt = 0;
 	unsigned char dmr_cnt = 0;
 
-	CDMREmbeddedData m_EmbeddedLC;
-
 	createGPS();
 
 	LogMessage("Starting YSF2DMR-%s", VERSION);
 
-	bool sendDisconnect = m_conf.getDMRNetworkSendDiscon();
+	bool sendDisconnect = m_conf.getDMRNetworkSendDisconnect();
 	bool unlinkReceived = false;
 
 	TG_STATUS TG_connect_state = NONE;
@@ -1042,7 +1040,7 @@ bool CYSF2DMR::createDMRNetwork()
 		m_defsrcid = m_srcHS;
 
 	m_srcid = m_defsrcid;
-	bool sendDisconnect = m_conf.getDMRNetworkSendDiscon();
+	bool sendDisconnect = m_conf.getDMRNetworkSendDisconnect();
 	
 	LogMessage("DMR Network Parameters");
 	LogMessage("    ID: %u", m_srcHS);
@@ -1050,7 +1048,7 @@ bool CYSF2DMR::createDMRNetwork()
 	LogMessage("    Startup DstID: %s %u", m_dmrpc ? "" : "TG", m_dstid);
 	LogMessage("    Address: %s", address.c_str());
 	LogMessage("    Port: %u", port);
-	LogMessage("    Send 4000 Disconect: %s", (sendDisconnect) ? "YES":"NO");	
+	LogMessage("    Send 4000 Disconect: %s", (sendDisconnect) ? "YES":"NO");
 	if (local > 0U)
 		LogMessage("    Local: %u", local);
 	else
