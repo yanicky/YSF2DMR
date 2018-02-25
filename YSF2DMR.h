@@ -42,7 +42,7 @@
 #include "DTMF.h"
 #include "GPS.h"
 #include "Log.h"
-#include "C4FM.h"
+#include "WiresX.h"
 #include "CRC.h"
 #include "APRSReader.h"
 
@@ -66,7 +66,7 @@ public:
 private:
 	std::string    m_callsign;
 	CConf          m_conf;
-	C4FM*          m_C4FM;
+	CWiresX*       m_wiresX;
 	CDMRNetwork*   m_dmrNetwork;
 	CYSFNetwork*   m_ysfNetwork;
 	CDMRLookup*    m_lookup;
@@ -76,7 +76,7 @@ private:
 	unsigned int   m_srcid;
 	unsigned int   m_defsrcid;
 	unsigned int   m_dstid;
-	unsigned int   next_dstid;
+	unsigned int   m_next_dstid;
 	bool           m_dmrpc;
 	std::string    m_netSrc;
 	std::string    m_netDst;
@@ -92,7 +92,7 @@ private:
 
 	bool createDMRNetwork();
 	void createGPS();
-	void SendDummy(unsigned int srcid, unsigned int dstid, FLCO dmr_flco);	
+	void SendDummyDMR(unsigned int srcid, unsigned int dstid, FLCO dmr_flco);	
 	unsigned int findYSFID(std::string cs);
 };
 

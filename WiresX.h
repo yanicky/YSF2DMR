@@ -16,8 +16,8 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#if !defined(C4FM_H)
-#define	C4FM_H
+#if !defined(WIRESX_H)
+#define	WIRESX_H
 
 #include "YSFNetwork.h"
 #include "DMRNetwork.h"
@@ -44,10 +44,10 @@ enum WXSI_STATUS {
 	WXSI_SEARCH
 };
 
-class C4FM {
+class CWiresX {
 public:
-	C4FM(const std::string& callsign, const std::string& suffix, CYSFNetwork* network);
-	~C4FM();
+	CWiresX(const std::string& callsign, const std::string& suffix, CYSFNetwork* network);
+	~CWiresX();
 
 	bool start();
 

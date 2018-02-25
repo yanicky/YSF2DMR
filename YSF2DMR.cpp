@@ -221,15 +221,15 @@ int CYSF2DMR::run()
 	CTimer networkWatchdog(100U, 0U, 1500U);
 	CTimer pollTimer(1000U, 5U);
 
-	// C4FM Control Object
-	m_C4FM = new C4FM(m_callsign, "R", m_ysfNetwork);
+	// CWiresX Control Object
+	m_wiresX = new CWiresX(m_callsign, "R", m_ysfNetwork);
 
 	std::string name = m_conf.getDescription();
 	unsigned int rxFrequency = m_conf.getRxFrequency();
 	unsigned int txFrequency = m_conf.getTxFrequency();
 	int reflector = m_conf.getDMRDstId();
 
-	m_C4FM->setInfo(name, txFrequency, rxFrequency, reflector);
+	m_wiresX->setInfo(name, txFrequency, rxFrequency, reflector);
 
 	m_dtmf = new CDTMF;
 	m_APRS = new CAPRSReader(m_conf.getAPRSAPIKey(), m_conf.getAPRSRefresh());
@@ -242,6 +242,7 @@ int CYSF2DMR::run()
 	ysfWatch.start();
 	dmrWatch.start();
 	pollTimer.start();
+
 	unsigned char ysf_cnt = 0;
 	unsigned char dmr_cnt = 0;
 
@@ -251,8 +252,8 @@ int CYSF2DMR::run()
 
 	LogMessage("Starting YSF2DMR-%s", VERSION);
 
-	bool Send_Discon = m_conf.getDMRNetworkSendDiscon();
-	bool unlink_received = false;
+	bool sendDisconnect = m_conf.getDMRNetworkSendDiscon();
+	bool unlinkReceived = false;
 
 	TG_STATUS TG_connect_state = NONE;
 	unsigned char gps_buffer[20U];
@@ -265,28 +266,28 @@ int CYSF2DMR::run()
 
 		switch (TG_connect_state) {
 			case WAITING_UNLINK:
-				if (unlink_received) {
+				if (unlinkReceived) {
 					LogMessage("Unlink Received");
 					TGChange.start();
 					TG_connect_state = SEND_REPLY;
-					m_dstid = next_dstid;
-					unlink_received = false;
+					m_dstid = m_next_dstid;
+					unlinkReceived = false;
 				}
 				break;
 			case SEND_REPLY:
 				if (TGChange.elapsed() > 600) {
 					TGChange.start();
 					TG_connect_state = SEND_PTT;
-					m_C4FM->sendConnectReply(m_dstid);
+					m_wiresX->sendConnectReply(m_dstid);
 				}
 				break;
 			case SEND_PTT:
 				if (TGChange.elapsed() > 600) {
 					TGChange.start();
 					TG_connect_state = NONE;
-					LogMessage("Sending PTT: Src: %s Dst: TG %d", m_ysfSrc.c_str(), next_dstid);
+					LogMessage("Sending PTT: Src: %s Dst: TG %d", m_ysfSrc.c_str(), m_next_dstid);
 					m_srcid = findYSFID(m_ysfSrc);
-					SendDummy(m_srcid, next_dstid, FLCO_GROUP);
+					SendDummyDMR(m_srcid, m_next_dstid, FLCO_GROUP);
 				}
 				break;
 			default: 
@@ -308,27 +309,27 @@ int CYSF2DMR::run()
 				unsigned char fn = fich.getFN();
 				unsigned char ft = fich.getFT();
 				
-				WX_STATUS status = m_C4FM->process(buffer + 35U, buffer + 14U, fi, dt, fn, ft);
+				WX_STATUS status = m_wiresX->process(buffer + 35U, buffer + 14U, fi, dt, fn, ft);
 
 				switch (status) {
 					case WXS_CONNECT:
-						next_dstid = m_C4FM->getReflector();
+						m_next_dstid = m_wiresX->getReflector();
 
-						if (next_dstid == 9990U)
+						if (m_next_dstid == 9990U)
 							dmrflco = FLCO_USER_USER;
 						else
 							dmrflco = FLCO_GROUP;
 
-						if (next_dstid == 4000U)
+						if (m_next_dstid == 4000U)
 							continue;
 
-						LogMessage("Connect to %d has been requested by %10.10s", next_dstid, buffer + 14U);
+						LogMessage("Connect to %d has been requested by %10.10s", m_next_dstid, buffer + 14U);
 
-						if (Send_Discon && (m_dstid != 9U)) {
+						if (sendDisconnect && (m_dstid != 9U)) {
 							unsigned char buf[10U];
 
 							::memcpy(buf, buffer + 14U, 6U);
-							buf[6] = 0U;
+							buf[6U] = 0U;
 
 							m_dstid = 4000U;
 
@@ -338,12 +339,12 @@ int CYSF2DMR::run()
 
 							m_srcid = findYSFID(m_ysfSrc);
 
-							SendDummy(m_srcid, 4000U, FLCO_GROUP);
+							SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 
-							unlink_received = false;
+							unlinkReceived = false;
 							TG_connect_state = WAITING_UNLINK;
 						} else {
-							m_dstid = next_dstid;
+							m_dstid = m_next_dstid;
 							TG_connect_state = SEND_REPLY;
 						}
 
@@ -357,14 +358,14 @@ int CYSF2DMR::run()
 						LogMessage("Disconnect has been requested by %10.10s", buffer + 14U);
 						unsigned char buf[10U];
 						::memcpy(buf, buffer + 14U, 6U);
-						buf[6] = 0U;
+						buf[6U] = 0U;
 
 						m_dstid = 4000U;
-						next_dstid = 9U;
+						m_next_dstid = 9U;
 						m_ysfSrc = reinterpret_cast<char const*>(buf);
 						m_srcid = findYSFID(m_ysfSrc);
 
-						SendDummy(m_srcid, 4000U, FLCO_GROUP);
+						SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 
 						TG_connect_state = WAITING_UNLINK;
 
@@ -410,19 +411,19 @@ int CYSF2DMR::run()
 				switch (status) {
 					case WXS_CONNECT:
 						id = m_dtmf->getReflector();
-						next_dstid = atoi(id.c_str());
+						m_next_dstid = atoi(id.c_str());
 						
-						if (next_dstid == 4000U)
+						if (m_next_dstid == 4000U)
 							continue;
 						
-						if (next_dstid == 9990U)
+						if (m_next_dstid == 9990U)
 							dmrflco = FLCO_USER_USER;
 						else
 							dmrflco = FLCO_GROUP;
 
-						LogMessage("Connect to %d has been requested by %10.10s", next_dstid, buffer + 14U);
+						LogMessage("Connect to %d has been requested by %10.10s", m_next_dstid, buffer + 14U);
 
-						if (Send_Discon && (m_dstid != 9U)) {
+						if (sendDisconnect && (m_dstid != 9U)) {
 							unsigned char buf[10U];
 							::memcpy(buf, buffer + 14U, 6U);
 							buf[6U] = 0U;
@@ -433,12 +434,12 @@ int CYSF2DMR::run()
 
 							LogMessage("Sending DMR Disconnect: Src: %s Dst: 4000", m_ysfSrc.c_str());
 
-							SendDummy(m_srcid, 4000U, FLCO_GROUP);
+							SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 							
-							unlink_received = false;
+							unlinkReceived = false;
 							TG_connect_state = WAITING_UNLINK;
 						} else {
-							m_dstid = next_dstid;
+							m_dstid = m_next_dstid;
 							TG_connect_state = SEND_REPLY;
 						}
 
@@ -448,16 +449,16 @@ int CYSF2DMR::run()
 					case WXS_DISCONNECT:
 						unsigned char buf[10U];
 						::memcpy(buf, buffer + 14U, 6U);
-						buf[6] = 0U;
+						buf[6U] = 0U;
 
 						LogMessage("Disconnect via DTMF has been requested by %10.10s", buffer + 14U);
 
 						m_dstid = 4000U;
-						next_dstid = 9U;
+						m_next_dstid = 9U;
 						m_ysfSrc = reinterpret_cast<char const*>(buf);
 						m_srcid = findYSFID(m_ysfSrc);
 
-						SendDummy(m_srcid, 4000U, FLCO_GROUP);
+						SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 
 						TG_connect_state = WAITING_UNLINK;
 						TGChange.start();
@@ -651,7 +652,7 @@ int CYSF2DMR::run()
 					LogMessage("DMR received end of voice transmission, %.1f seconds", float(m_dmrFrames) / 16.667F);
 
 					if (SrcId == 4000)
-						unlink_received = true;
+						unlinkReceived = true;
 
 					m_conv.putDMREOT();
 					m_dmrNetwork->reset(2U);
@@ -858,7 +859,7 @@ int CYSF2DMR::run()
 
 		m_ysfNetwork->clock(ms);
 		m_dmrNetwork->clock(ms);
-		m_C4FM->clock(ms);
+		m_wiresX->clock(ms);
 
 		if (m_gps != NULL)
 			m_gps->clock(ms);
@@ -884,7 +885,7 @@ int CYSF2DMR::run()
 	
 	delete m_dmrNetwork;
 	delete m_ysfNetwork;
-	delete m_C4FM;
+	delete m_wiresX;
 	delete m_dtmf;
 
 	::LogFinalise();
@@ -926,7 +927,7 @@ void CYSF2DMR::createGPS()
 	}
 }
 
-void CYSF2DMR::SendDummy(unsigned int srcid,unsigned int dstid, FLCO dmr_flco)
+void CYSF2DMR::SendDummyDMR(unsigned int srcid,unsigned int dstid, FLCO dmr_flco)
 {
 	CDMREmbeddedData m_EmbeddedLC;
 	CDMRData rx_dmrdata;
@@ -1084,7 +1085,7 @@ bool CYSF2DMR::createDMRNetwork()
 		m_defsrcid = m_srcHS;
 
 	m_srcid = m_defsrcid;
-	bool Send_Discon = m_conf.getDMRNetworkSendDiscon();
+	bool sendDisconnect = m_conf.getDMRNetworkSendDiscon();
 	
 	LogMessage("DMR Network Parameters");
 	LogMessage("    ID: %u", m_srcHS);
@@ -1092,7 +1093,7 @@ bool CYSF2DMR::createDMRNetwork()
 	LogMessage("    Startup DstID: %s %u", m_dmrpc ? "" : "TG", m_dstid);
 	LogMessage("    Address: %s", address.c_str());
 	LogMessage("    Port: %u", port);
-	LogMessage("    Send 4000 Disconect: %s", (Send_Discon) ? "YES":"NO");	
+	LogMessage("    Send 4000 Disconect: %s", (sendDisconnect) ? "YES":"NO");	
 	if (local > 0U)
 		LogMessage("    Local: %u", local);
 	else

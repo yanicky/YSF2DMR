@@ -16,7 +16,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "C4FM.h"
+#include "WiresX.h"
 #include "YSFPayload.h"
 #include "YSFFICH.h"
 #include "Utils.h"
@@ -42,7 +42,7 @@ const unsigned char DEFAULT_FICH[] = {0x20U, 0x00U, 0x01U, 0x00U};
 
 const unsigned char NET_HEADER[] = "YSFD                    ALL      ";
 
-C4FM::C4FM(const std::string& callsign, const std::string& suffix, CYSFNetwork* network) :
+CWiresX::CWiresX(const std::string& callsign, const std::string& suffix, CYSFNetwork* network) :
 m_callsign(callsign),
 m_node(),
 m_id(),
@@ -81,7 +81,7 @@ m_search()
 	m_csd3   = new unsigned char[20U];
 }
 
-C4FM::~C4FM()
+CWiresX::~CWiresX()
 {
 	delete[] m_csd3;
 	delete[] m_csd2;
@@ -90,7 +90,7 @@ C4FM::~C4FM()
 	delete[] m_command;
 }
 
-void C4FM::setInfo(const std::string& name, unsigned int txFrequency, unsigned int rxFrequency, int reflector)
+void CWiresX::setInfo(const std::string& name, unsigned int txFrequency, unsigned int rxFrequency, int reflector)
 {
 	assert(txFrequency > 0U);
 	assert(rxFrequency > 0U);
@@ -148,7 +148,7 @@ void C4FM::setInfo(const std::string& name, unsigned int txFrequency, unsigned i
 }
 
 
-WX_STATUS C4FM::process(const unsigned char* data, const unsigned char* source, unsigned char fi, unsigned char dt, unsigned char fn, unsigned char ft)
+WX_STATUS CWiresX::process(const unsigned char* data, const unsigned char* source, unsigned char fi, unsigned char dt, unsigned char fn, unsigned char ft)
 {
 	assert(data != NULL);
 	assert(source != NULL);
@@ -214,13 +214,13 @@ WX_STATUS C4FM::process(const unsigned char* data, const unsigned char* source, 
 	return WXS_NONE;
 }
 
-int C4FM::getReflector() const
+int CWiresX::getReflector() const
 {
 	return m_reflector;
 }
 
 
-void C4FM::processDX(const unsigned char* source)
+void CWiresX::processDX(const unsigned char* source)
 {
 	::LogDebug("Received DX from %10.10s", source);
 
@@ -228,7 +228,7 @@ void C4FM::processDX(const unsigned char* source)
 	m_timer.start();
 }
 
-void C4FM::processAll(const unsigned char* source, const unsigned char* data)
+void CWiresX::processAll(const unsigned char* source, const unsigned char* data)
 {
 	if (data[0U] == '0' && data[1] == '1') {
 		::LogDebug("Received ALL for \"%3.3s\" from %10.10s", data + 2U, source);
@@ -255,7 +255,7 @@ void C4FM::processAll(const unsigned char* source, const unsigned char* data)
 	}
 }
 
-WX_STATUS C4FM::processConnect(const unsigned char* source, const unsigned char* data)
+WX_STATUS CWiresX::processConnect(const unsigned char* source, const unsigned char* data)
 {
 	::LogDebug("Received Connect to %6.6s from %10.10s", data, source);
 
@@ -271,7 +271,7 @@ WX_STATUS C4FM::processConnect(const unsigned char* source, const unsigned char*
 	return WXS_CONNECT;
 }
 
-void C4FM::processConnect(int reflector)
+void CWiresX::processConnect(int reflector)
 {
 	m_reflector = reflector;
 
@@ -279,7 +279,7 @@ void C4FM::processConnect(int reflector)
 	m_timer.start();
 }
 
-void C4FM::processDisconnect(const unsigned char* source)
+void CWiresX::processDisconnect(const unsigned char* source)
 {
 	if (source != NULL)
 		::LogDebug("Received Disconect from %10.10s", source);
@@ -290,7 +290,7 @@ void C4FM::processDisconnect(const unsigned char* source)
 	m_timer.start();
 }
 
-void C4FM::clock(unsigned int ms)
+void CWiresX::clock(unsigned int ms)
 {
 	//m_reflectors.clock(ms);
 
@@ -323,7 +323,7 @@ void C4FM::clock(unsigned int ms)
 	}
 }
 
-void C4FM::createReply(const unsigned char* data, unsigned int length)
+void CWiresX::createReply(const unsigned char* data, unsigned int length)
 {
 	assert(data != NULL);
 	assert(length > 0U);
@@ -439,7 +439,7 @@ void C4FM::createReply(const unsigned char* data, unsigned int length)
 	m_network->write(buffer);
 }
 
-unsigned char C4FM::calculateFT(unsigned int length, unsigned int offset) const
+unsigned char CWiresX::calculateFT(unsigned int length, unsigned int offset) const
 {
 	length -= offset;
 
@@ -458,7 +458,7 @@ unsigned char C4FM::calculateFT(unsigned int length, unsigned int offset) const
 	return 1U;
 }
 
-void C4FM::sendDXReply()
+void CWiresX::sendDXReply()
 {
 	unsigned char data[150U];
 	::memset(data, 0x00U, 150U);
@@ -543,7 +543,7 @@ void C4FM::sendDXReply()
 	m_seqNo++;
 }
 
-void C4FM::sendConnectReply(unsigned int reflector)
+void CWiresX::sendConnectReply(unsigned int reflector)
 {
 	m_reflector=reflector;
 	assert(m_reflector != 0);
@@ -607,7 +607,7 @@ void C4FM::sendConnectReply(unsigned int reflector)
 	m_seqNo++;
 }
 
-void C4FM::sendDisconnectReply()
+void CWiresX::sendDisconnectReply()
 {
 	unsigned char data[110U];
 	::memset(data, 0x00U, 110U);
@@ -644,7 +644,7 @@ void C4FM::sendDisconnectReply()
 	m_seqNo++;
 }
 
-void C4FM::sendAllReply()
+void CWiresX::sendAllReply()
 {
 /* //	if (m_start == 0U)
 	//	m_reflectors.reload();
@@ -720,7 +720,7 @@ void C4FM::sendAllReply()
 	m_seqNo++; */
 }
 
-void C4FM::sendSearchReply()
+void CWiresX::sendSearchReply()
 {
 //	if (m_search.size() == 0U) {
 	//	sendSearchNotFoundReply();
@@ -798,7 +798,7 @@ void C4FM::sendSearchReply()
 	m_seqNo++; */
 }
 
-void C4FM::sendSearchNotFoundReply()
+void CWiresX::sendSearchNotFoundReply()
 {
 	unsigned char data[70U];
 	::memset(data, 0x00U, 70U);

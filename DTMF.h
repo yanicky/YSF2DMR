@@ -19,7 +19,7 @@
 #ifndef DTMF_H
 #define	DTMF_H
 
-#include "C4FM.h"
+#include "WiresX.h"
 
 #include <string>
 
