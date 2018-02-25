@@ -60,34 +60,33 @@ public:
 	void processDisconnect(const unsigned char* source = NULL);
     void setInfo(const std::string& name, unsigned int txFrequency, unsigned int rxFrequency, int reflector);
 	void sendConnectReply(unsigned int reflector);
-	void sendDisconnectReply();	
+	void sendDisconnectReply();
 	void clock(unsigned int ms);
 
 private:
 	std::string    m_callsign;
-	std::string    m_node;	
+	std::string    m_node;
 	std::string    m_id;
 	std::string    m_name;
 	unsigned int   m_txFrequency;
 	unsigned int   m_rxFrequency;
-    unsigned int   m_reflector;  //	
+    unsigned int   m_reflector;
 	CYSFNetwork*   m_network;
-	unsigned char* m_command; //
-	CTimer         m_timer; //
-	unsigned char  m_seqNo; //
-	unsigned char* m_header; //
-	unsigned char* m_csd1; //
-	unsigned char* m_csd2; //
-	unsigned char* m_csd3; //
-	WXSI_STATUS    m_status; //
-	unsigned int   m_start;  //
-	std::string    m_search; //
+	unsigned char* m_command;
+	CTimer         m_timer;
+	unsigned char  m_seqNo;
+	unsigned char* m_header;
+	unsigned char* m_csd1;
+	unsigned char* m_csd2;
+	unsigned char* m_csd3;
+	WXSI_STATUS    m_status;
+	unsigned int   m_start;
+	std::string    m_search;
 
 	WX_STATUS processConnect(const unsigned char* source, const unsigned char* data);
 	void processDX(const unsigned char* source);
 	void processAll(const unsigned char* source, const unsigned char* data);
 
-	
 	void sendDXReply();
 	void sendAllReply();
 	void sendSearchReply();

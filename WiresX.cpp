@@ -285,8 +285,6 @@ void CWiresX::processDisconnect(const unsigned char* source)
 	if (source != NULL)
 		::LogDebug("Received Disconect from %10.10s", source);
 
-	//m_reflector = 0;
-
 	m_status = WXSI_DISCONNECT;
 	m_timer.start();
 }
@@ -309,11 +307,8 @@ void CWiresX::clock(unsigned int ms)
 			sendSearchReply();
 			break;
 		case WXSI_CONNECT:
-			//CThread::sleep(100U);
-			//sendConnectReply();
 			break;
 		case WXSI_DISCONNECT:
-			//sendDisconnectReply();
 			break;
 		default:
 			break;
@@ -490,28 +485,34 @@ void CWiresX::sendDXReply()
 		data[34U] = '1';
 		data[35U] = '5';
 		
-		// id name count desc
+		// ID name count desc
 		char buf[20];
 		char buf1[20];
 		
-		sprintf(buf,"%05d",m_reflector);
-		::memcpy(data+36U,buf,5U);
+		sprintf(buf, "%05d", m_reflector);
+		::memcpy(data + 36U, buf, 5U);
 		
-		if (m_reflector>99999U) sprintf(buf1,"CALL %d",m_reflector);
-		else if (m_reflector==9U) strcpy(buf1,"LOCAL");		
-		else if (m_reflector==9990U) strcpy(buf1,"PARROT");
-		else if (m_reflector==4000U) strcpy(buf1,"UNLINK");
-		else sprintf(buf1,"TG %d",m_reflector);		
+		if (m_reflector > 99999U)
+			sprintf(buf1, "CALL %d", m_reflector);
+		else if (m_reflector == 9U)
+			strcpy(buf1, "LOCAL");
+		else if (m_reflector == 9990U)
+			strcpy(buf1, "PARROT");
+		else if (m_reflector == 4000U)
+			strcpy(buf1, "UNLINK");
+		else
+			sprintf(buf1, "TG %d", m_reflector);
 
-		int i=strlen(buf1);
-		while (i<16) {
-			buf1[i]=' ';
+		int i = strlen(buf1);
+		while (i < 16) {
+			buf1[i] = ' ';
 			i++;
 		}
-		buf1[i]=0;
-		::memcpy(data+41U,buf1,16U);
-		::memcpy(data+57U,"000",3U);
-		::memcpy(data+70U,"Descripcion   ",14U);		
+		buf1[i] = 0;
+
+		::memcpy(data + 41U, buf1, 16U);
+		::memcpy(data + 57U, "000", 3U);
+		::memcpy(data + 70U, "Descripcion   ", 14U);
 
 	}
 
@@ -568,29 +569,36 @@ void CWiresX::sendConnectReply(unsigned int reflector)
 		data[i + 20U] = m_name.at(i);
 
 	data[34U] = '1';
-	data[35U] = '5';    
+	data[35U] = '5';
 
 	// id name count desc
 	char buf[20U];
 	char buf1[20U];
 	
-	sprintf(buf,"%05d",m_reflector);
-	::memcpy(data+36U,buf,5U);
-	if (m_reflector>99999U) sprintf(buf1,"CALL %d",m_reflector);
-	else if (m_reflector==9U) strcpy(buf1,"LOCAL");
-	else if (m_reflector==9990U) strcpy(buf1,"PARROT");
-	else if (m_reflector==4000U) strcpy(buf1,"UNLINK");
-	else sprintf(buf1,"TG %d",m_reflector);
-	
-	int i=strlen(buf1);
-	while (i<16) {
-		buf1[i]=' ';
+	sprintf(buf, "%05d", m_reflector);
+	::memcpy(data + 36U, buf, 5U);
+
+	if (m_reflector > 99999U)
+		sprintf(buf1, "CALL %d", m_reflector);
+	else if (m_reflector == 9U)
+		strcpy(buf1, "LOCAL");
+	else if (m_reflector == 9990U)
+		strcpy(buf1, "PARROT");
+	else if (m_reflector == 4000U)
+		strcpy(buf1, "UNLINK");
+	else
+		sprintf(buf1, "TG %d", m_reflector);
+
+	int i = strlen(buf1);
+	while (i < 16) {
+		buf1[i] = ' ';
 		i++;
 	}
-	buf1[i]=0;
-	::memcpy(data+41U,buf1,16U);
-	::memcpy(data+57U,"000",3U);
-	::memcpy(data+70U,"Descripcion   ",14U);
+	buf1[i] = 0;
+
+	::memcpy(data + 41U, buf1, 16U);
+	::memcpy(data + 57U, "000", 3U);
+	::memcpy(data + 70U, "Descripcion   ", 14U);
 
 	data[84U] = '0';
 	data[85U] = '0';
