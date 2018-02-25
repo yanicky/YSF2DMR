@@ -50,6 +50,7 @@ const char* DEFAULT_INI_FILE = "/etc/YSF2DMR.ini";
 
 int end = 0;
 
+#if !defined(_WIN32) && !defined(_WIN64)
 void sig_handler(int signo)
 {
 	if (signo == SIGTERM) {
@@ -57,6 +58,7 @@ void sig_handler(int signo)
 		::fprintf(stdout, "Received SIGTERM\n");
 	}
 }
+#endif
 
 int main(int argc, char** argv)
 {
@@ -76,9 +78,11 @@ int main(int argc, char** argv)
 		}
 	}
 
+#if !defined(_WIN32) && !defined(_WIN64)
 	// Capture SIGTERM to finish gracelessly
 	if (signal(SIGTERM, sig_handler) == SIG_ERR) 
 		::fprintf(stdout, "Can't catch SIGTERM\n");
+#endif
 
 	CYSF2DMR* gateway = new CYSF2DMR(std::string(iniFile));
 

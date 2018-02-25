@@ -156,7 +156,6 @@
     <ClCompile Include="Golay2087.cpp" />
     <ClCompile Include="Golay24128.cpp" />
     <ClCompile Include="Hamming.cpp" />
-    <ClCompile Include="JitterBuffer.cpp" />
     <ClCompile Include="Log.cpp" />
     <ClCompile Include="ModeConv.cpp" />
     <ClCompile Include="Mutex.cpp" />
@@ -174,6 +173,12 @@
     <ClCompile Include="YSFFICH.cpp" />
     <ClCompile Include="YSFNetwork.cpp" />
     <ClCompile Include="YSFPayload.cpp" />
+    <ClCompile Include="DTMF.cpp" />
+    <ClCompile Include="APRSWriter.cpp" />
+    <ClCompile Include="APRSWriterThread.cpp" />
+    <ClCompile Include="GPS.cpp" />
+    <ClCompile Include="APRSReader.cpp" />
+    <ClCompile Include="WiresX.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BPTC19696.h" />
@@ -193,7 +198,6 @@
     <ClInclude Include="Golay2087.h" />
     <ClInclude Include="Golay24128.h" />
     <ClInclude Include="Hamming.h" />
-    <ClInclude Include="JitterBuffer.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="ModeConv.h" />
     <ClInclude Include="Mutex.h" />
@@ -214,6 +218,12 @@
     <ClInclude Include="YSFFICH.h" />
     <ClInclude Include="YSFNetwork.h" />
     <ClInclude Include="YSFPayload.h" />
+    <ClInclude Include="DTMF.h" />
+    <ClInclude Include="APRSWriter.h" />
+    <ClInclude Include="APRSWriterThread.h" />
+    <ClInclude Include="GPS.h" />
+    <ClInclude Include="APRSReader.h" />
+    <ClInclude Include="WiresX.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
