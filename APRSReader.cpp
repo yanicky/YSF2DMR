@@ -1,6 +1,7 @@
 /*
 *   Copyright (C) 2016,2017 by Jonathan Naylor G4KLX
 *   Copyright (C) 2018 by Andy Uribe CA6JAU
+*   Copyright (C) 2018 by Manuel Sanchez EA7EE
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -152,7 +153,7 @@ bool CAPRSReader::load_call()
 	std::string website_HTML;
 
 	// get information
-	LogMessage("Searching %s.",m_cs.c_str());
+	LogMessage("Searching %s",m_cs.c_str());
 	// website url
 	std::string url = "/api/get?name=" + m_cs + "&what=loc&apikey=" + m_ApiKey + "&format=json";
 	//HTTP GET
@@ -166,7 +167,7 @@ bool CAPRSReader::load_call()
 	  
     host = gethostbyname("api.aprs.fi");
 	if (host == NULL) {
-        LogMessage("ERROR, no such host.");
+        LogMessage("ERROR, no such host");
         return false;
     }	
 	
@@ -197,20 +198,20 @@ bool CAPRSReader::load_call()
 //				m_lon_table[m_cs]=0;
 //				m_time_table[m_cs]=epoch;
 //				close(sockfd);				
-//				LogMessage("Call %s not found.",m_cs.c_str());
+//				LogMessage("Call %s not found",m_cs.c_str());
 //				return false;
 //			}
 			if (i>5 && buffer[i-4] == '\"' && buffer[i-3] == 'l' && buffer[i-2] == 'a' && buffer[i-1] == 't' && buffer[i] == '\"'){
 				::memcpy(tmp_str,buffer+i+3,8U);
 				tmp_str[8]=0;
-				//LogMessage("Latitude: %s.",tmp_str);			
+				//LogMessage("Latitude: %s",tmp_str);			
 				latitude=(int)(atof(tmp_str)*1000);
 				m_lat_table[m_cs]=latitude;
 		   }
 			if (i>5 && buffer[i-4] == '\"' && buffer[i-3] == 'l' && buffer[i-2] == 'n' && buffer[i-1] == 'g' && buffer[i] == '\"'){
 				::memcpy(tmp_str,buffer+i+3,8U);
 				tmp_str[8]=0;
-				//LogMessage("Longitude: %s.",tmp_str);			
+				//LogMessage("Longitude: %s",tmp_str);			
 				longitude=(int)(atof(tmp_str)*1000);
 				m_lon_table[m_cs]=longitude;
 		   }
@@ -224,11 +225,11 @@ bool CAPRSReader::load_call()
 	if (latitude==0 || longitude==0) {
 		m_lat_table[m_cs]=0;
 		m_lon_table[m_cs]=0;		
-		LogMessage("Call %s not found.",m_cs.c_str());		
+		LogMessage("Call %s not found",m_cs.c_str());		
 		return false;
 	}
 	else {
-		LogMessage("Call %s found.",m_cs.c_str());		
+		LogMessage("Call %s found",m_cs.c_str());		
 		return true;
 	}
 }
@@ -266,7 +267,7 @@ bool CAPRSReader::findCall(std::string cs, int *latitude, int *longitude)
 		tempo=m_time_table.at(cs);
 		
 		if (epoch>(tempo+m_refres_time)) {
-			//LogMessage("Location expired.");
+			//LogMessage("Location expired");
 			if (!m_new_callsign) {
 				m_new_callsign=true;
 				m_cs=cs;

@@ -686,10 +686,10 @@ int CYSF2DMR::run()
 						//LogMessage("Searching GPS Position of %s in aprs.fi", m_netSrc.c_str());
 
 						if (resp) {
-							LogMessage("GPS Position of %s is: lat=%d, lon=%d.", m_netSrc.c_str(), lat, lon);
+							LogMessage("GPS Position of %s is: lat=%d, lon=%d", m_netSrc.c_str(), lat, lon);
 							m_APRS->formatGPS(gps_buffer, lat, lon);
 						}
-							else LogMessage("GPS Position not available.");
+							else LogMessage("GPS Position not available");
 					}
 
 					m_netSrc.resize(YSF_CALLSIGN_LENGTH, ' ');
