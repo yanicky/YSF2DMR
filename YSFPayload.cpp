@@ -276,7 +276,7 @@ bool CYSFPayload::readDataFRModeData1(const unsigned char* data, unsigned char* 
 	unsigned char output[23U];
 	conv.chainback(output, 176U);
 
-	bool ret = CCRC::checkCCITT16(output, 22U);
+	bool ret = CCRC::checkCCITT162(output, 22U);
 	if (ret) {
 		for (unsigned int i = 0U; i < 20U; i++)
 			output[i] ^= WHITENING_DATA[i];
@@ -323,7 +323,7 @@ bool CYSFPayload::readDataFRModeData2(const unsigned char* data, unsigned char* 
 	unsigned char output[23U];
 	conv.chainback(output, 176U);
 
-	bool ret = CCRC::checkCCITT16(output, 22U);
+	bool ret = CCRC::checkCCITT162(output, 22U);
 	if (ret) {
 		for (unsigned int i = 0U; i < 20U; i++)
 			output[i] ^= WHITENING_DATA[i];
@@ -412,7 +412,7 @@ bool CYSFPayload::readVDMode1Data(const unsigned char* data, unsigned char* dt)
 	unsigned char output[23U];
 	conv.chainback(output, 176U);
 
-	bool ret = CCRC::checkCCITT16(output, 22U);
+	bool ret = CCRC::checkCCITT162(output, 22U);
 	if (ret) {
 		for (unsigned int i = 0U; i < 20U; i++)
 			output[i] ^= WHITENING_DATA[i];
