@@ -993,14 +993,21 @@ unsigned int CYSF2DMR::findYSFID(std::string cs)
 {
 	std::string cstrim;
 
-	size_t first = cs.find_first_not_of(' ');
-	size_t mid = cs.find_last_of('-');
-	size_t last = cs.find_last_not_of(' ');
+	int first = cs.find_first_not_of(' ');
+	int mid1 = cs.find_last_of('-');
+	int mid2 = cs.find_last_of('/');
+	int last = cs.find_last_not_of(' ');
+	
+	LogMessage("ID: first:%d mid1:%d mid2:%d last:%d", first, mid1, mid2, last);
 
-	if (mid == -1)
+	if (mid1 == -1 && mid2 == -1)
 		cstrim = cs.substr(first, (last - first + 1));
+	else if (mid1 > first)
+		cstrim = cs.substr(first, (mid1 - first));
+	else if (mid2 > first)
+		cstrim = cs.substr(first, (mid2 - first));
 	else
-		cstrim = cs.substr(first, (mid - first));
+		cstrim = "N0CALL";
 
 	unsigned int id = m_lookup->findID(cstrim);
 
