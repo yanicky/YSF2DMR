@@ -167,6 +167,7 @@
     <ClCompile Include="Thread.cpp" />
     <ClCompile Include="Timer.cpp" />
     <ClCompile Include="UDPSocket.cpp" />
+    <ClCompile Include="TCPSocket.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="YSF2DMR.cpp" />
     <ClCompile Include="YSFConvolution.cpp" />
@@ -210,6 +211,7 @@
     <ClInclude Include="Thread.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="UDPSocket.h" />
+    <ClInclude Include="TCPSocket.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Version.h" />
     <ClInclude Include="YSF2DMR.h" />

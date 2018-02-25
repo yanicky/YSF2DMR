@@ -22,19 +22,35 @@
 #include "Timer.h"
 #include "Log.h"
 
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <netdb.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cctype>
-#include <unistd.h>
-#include <errno.h>
-#include <arpa/inet.h> 
 #include <time.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+static const unsigned __int64 epoch = ((unsigned __int64)116444736000000000ULL);
+
+int gettimeofday(struct timeval * tp, struct timezone * tzp)
+{
+	FILETIME    file_time;
+	SYSTEMTIME  system_time;
+	ULARGE_INTEGER ularge;
+
+	GetSystemTime(&system_time);
+	SystemTimeToFileTime(&system_time, &file_time);
+	ularge.LowPart = file_time.dwLowDateTime;
+	ularge.HighPart = file_time.dwHighDateTime;
+
+	tp->tv_sec = (long)((ularge.QuadPart - epoch) / 10000000L);
+	tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
+	return 0;
+}
+#else
 #include <sys/time.h>
+#endif
+
+const unsigned int APRS_TIMEOUT = 10U;
 
 CAPRSReader::CAPRSReader(std::string ApiKey,int refres_time) :
 CThread(),
@@ -64,9 +80,12 @@ void CAPRSReader::entry()
 
 	while (!m_stop) {
 		
-		while(!m_new_callsign) sleep(1000U);
+		while(!m_new_callsign)
+			sleep(1000U);
+		
 		load_call();
-		m_new_callsign=false;
+		
+		m_new_callsign = false;
 	}
 
 	LogMessage("Stopped the APRS Reader lookup thread");
@@ -159,13 +178,10 @@ bool CAPRSReader::load_call()
 	struct timeval timeinfo;
 	unsigned long epoch;
 
-	int sockfd = 0;
-	struct sockaddr_in SockAddr;
-	struct hostent *host;
 	int longitude = 0;
 	int latitude = 0;
 	
-	char buffer[10000];
+	unsigned char buffer[10000];
 	int nDataLength;
 	std::string website_HTML;
 
@@ -176,36 +192,21 @@ bool CAPRSReader::load_call()
 	//HTTP GET
 	std::string get_http = "GET " + url + " HTTP/1.1\r\nHost: api.aprs.fi\r\nUser-Agent: YSF2DMR/0.12\r\n\r\n";
 
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
-	if (sockfd < 0) {
-		LogMessage("Could not open socket");
-		return false;
-	}
-
-	host = gethostbyname("api.aprs.fi");
-	if (host == NULL) {
-		LogMessage("ERROR, no such host");
-		return false;
-	}
-
-	bzero((char *) &SockAddr, sizeof(SockAddr));
-	SockAddr.sin_family = AF_INET;
-	bcopy((char *)host->h_addr, (char *)&SockAddr.sin_addr.s_addr, host->h_length);
-	SockAddr.sin_port = htons(80);
-
-	if(connect(sockfd, (struct sockaddr*) &SockAddr, sizeof(SockAddr)) < 0){
-		LogMessage("Could not connect");
+	CTCPSocket sockfd("api.aprs.fi", 80);
+	
+	bool ret = sockfd.open();
+	if (!ret){
+		LogMessage("Could not connect to api.aprs.fi");
 		return false;
 	}
 
 	// send GET / HTTP
-	write(sockfd, get_http.c_str(), strlen(get_http.c_str()));
+	sockfd.write((const unsigned char*)get_http.c_str(), strlen(get_http.c_str()));
 	// recieve html
-	gettimeofday(&timeinfo,0);
+	gettimeofday(&timeinfo, 0);
 	epoch = timeinfo.tv_sec;
 
-	while ((nDataLength = read(sockfd, buffer, 10000)) > 0){
+	while ((nDataLength = sockfd.read(buffer, 10000, APRS_TIMEOUT)) > 0){
 		int i = 0;
 		char tmp_str[20];
 		for (i = 0; i < nDataLength; i++) {
@@ -228,7 +229,7 @@ bool CAPRSReader::load_call()
 
 	m_time_table[m_cs] = epoch;
 
-	close(sockfd);
+	sockfd.close();
 
 	if (latitude == 0 || longitude == 0) {
 		m_lat_table[m_cs] = 0;
@@ -237,7 +238,7 @@ bool CAPRSReader::load_call()
 		return false;
 	}
 	else {
-		LogMessage("Call %s found", m_cs.c_str());
+		LogMessage("Call %s found Lat: %d, Lon: %d", m_cs.c_str(), latitude, longitude);
 		return true;
 	}
 }

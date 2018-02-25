@@ -20,6 +20,7 @@
 #ifndef	APRSReader_H
 #define	APRSReader_H
 
+#include "TCPSocket.h"
 #include "Thread.h"
 #include "Mutex.h"
 
