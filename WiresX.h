@@ -1,6 +1,7 @@
 /*
 *   Copyright (C) 2016,2017 by Jonathan Naylor G4KLX
 *   Copyright (C) 2018 by Manuel Sanchez EA7EE
+*   Copyright (C) 2018 by Andy Uribe CA6JAU
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -25,6 +26,7 @@
 #include "Thread.h"
 #include "Timer.h"
 
+#include <vector>
 #include <string>
 
 enum WX_STATUS {
@@ -45,9 +47,25 @@ enum WXSI_STATUS {
 	WXSI_SEARCH
 };
 
+class CTGReg {
+public:
+	CTGReg() :
+	m_id(),
+	m_pc(),
+	m_name(),
+	m_desc()
+	{
+	}
+
+	std::string  m_id;
+	std::string  m_pc;
+	std::string  m_name;
+	std::string  m_desc;
+};
+
 class CWiresX {
 public:
-	CWiresX(const std::string& callsign, const std::string& suffix, CYSFNetwork* network);
+	CWiresX(const std::string& callsign, const std::string& suffix, CYSFNetwork* network, std::string tgfile);
 	~CWiresX();
 
 	bool start();
@@ -64,24 +82,25 @@ public:
 	void clock(unsigned int ms);
 
 private:
-	std::string    m_callsign;
-	std::string    m_node;
-	std::string    m_id;
-	std::string    m_name;
-	unsigned int   m_txFrequency;
-	unsigned int   m_rxFrequency;
-    unsigned int   m_reflector;
-	CYSFNetwork*   m_network;
-	unsigned char* m_command;
-	CTimer         m_timer;
-	unsigned char  m_seqNo;
-	unsigned char* m_header;
-	unsigned char* m_csd1;
-	unsigned char* m_csd2;
-	unsigned char* m_csd3;
-	WXSI_STATUS    m_status;
-	unsigned int   m_start;
-	std::string    m_search;
+	std::string          m_callsign;
+	std::string          m_node;
+	std::string          m_id;
+	std::string          m_name;
+	unsigned int         m_txFrequency;
+	unsigned int         m_rxFrequency;
+    unsigned int         m_dstID;
+	CYSFNetwork*         m_network;
+	unsigned char*       m_command;
+	CTimer               m_timer;
+	unsigned char        m_seqNo;
+	unsigned char*       m_header;
+	unsigned char*       m_csd1;
+	unsigned char*       m_csd2;
+	unsigned char*       m_csd3;
+	WXSI_STATUS          m_status;
+	unsigned int         m_start;
+	std::string          m_search;
+	std::vector<CTGReg*> m_currTGList;
 
 	WX_STATUS processConnect(const unsigned char* source, const unsigned char* data);
 	void processDX(const unsigned char* source);

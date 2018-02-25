@@ -64,6 +64,7 @@ public:
   bool         getDMRNetworkJitterEnabled() const;
   unsigned int getDMRNetworkJitter() const;
   bool         getDMRNetworkSendDisconnect() const;
+  std::string  getDMRTGListFile() const;
 
   // The DMR Id section
   std::string  getDMRIdLookupFile() const;
@@ -114,7 +115,8 @@ private:
   bool         m_dmrNetworkDebug;
   bool         m_dmrNetworkJitterEnabled;
   unsigned int m_dmrNetworkJitter;
-  bool		   m_dmrNetworkSendDisconnect;
+  bool         m_dmrNetworkSendDisconnect;
+  std::string  m_dmrTGListFile;
 
   std::string  m_dmrIdLookupFile;
   unsigned int m_dmrIdLookupTime;

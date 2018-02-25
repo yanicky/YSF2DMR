@@ -185,7 +185,9 @@ bool CConf::read()
 		else if (::strcmp(key, "Jitter") == 0)
 			m_dmrNetworkJitter = (unsigned int)::atoi(value);
 		else if (::strcmp(key, "SendDisconnect") == 0)
-			m_dmrNetworkSendDisconnect = ::atoi(value) == 1;		
+			m_dmrNetworkSendDisconnect = ::atoi(value) == 1;
+		else if (::strcmp(key, "TGListFile") == 0)
+			m_dmrTGListFile = value;
 	} else if (section == SECTION_DMRID_LOOKUP) {
 		if (::strcmp(key, "File") == 0)
 			m_dmrIdLookupFile = value;
@@ -391,6 +393,11 @@ unsigned int CConf::getDMRNetworkJitter() const
 bool CConf::getDMRNetworkSendDisconnect() const
 {
 	return m_dmrNetworkSendDisconnect;
+}
+
+std::string CConf::getDMRTGListFile() const
+{
+	return m_dmrTGListFile;
 }
 
 std::string CConf::getDMRIdLookupFile() const

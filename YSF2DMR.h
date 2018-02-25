@@ -91,6 +91,7 @@ private:
 	unsigned int     m_dmrFrames;
 	unsigned int     m_ysfFrames;
 	CDMREmbeddedData m_EmbeddedLC;
+	std::string      m_TGList;
 
 	bool createDMRNetwork();
 	void createGPS();

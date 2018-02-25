@@ -1,6 +1,7 @@
 /*
 *   Copyright (C) 2016,2017 by Jonathan Naylor G4KLX
 *   Copyright (C) 2018 by Manuel Sanchez EA7EE
+*   Copyright (C) 2018 by Andy Uribe CA6JAU
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -43,14 +44,14 @@ const unsigned char DEFAULT_FICH[] = {0x20U, 0x00U, 0x01U, 0x00U};
 
 const unsigned char NET_HEADER[] = "YSFD                    ALL      ";
 
-CWiresX::CWiresX(const std::string& callsign, const std::string& suffix, CYSFNetwork* network) :
+CWiresX::CWiresX(const std::string& callsign, const std::string& suffix, CYSFNetwork* network, std::string tgfile) :
 m_callsign(callsign),
 m_node(),
 m_id(),
 m_name(),
 m_txFrequency(0U),
 m_rxFrequency(0U),
-m_reflector(0U),
+m_dstID(0U),
 m_network(network),
 m_command(NULL),
 m_timer(1000U, 1U),
@@ -80,6 +81,36 @@ m_search()
 	m_csd1   = new unsigned char[20U];
 	m_csd2   = new unsigned char[20U];
 	m_csd3   = new unsigned char[20U];
+
+	// Load file with TG List
+	FILE* fp = ::fopen(tgfile.c_str(), "rt");
+	if (fp != NULL) {
+		char buffer[100U];
+		while (::fgets(buffer, 100U, fp) != NULL) {
+			if (buffer[0U] == '#')
+				continue;
+
+			char* p1 = ::strtok(buffer, ";\r\n");
+			char* p2 = ::strtok(NULL, ";\r\n");
+			char* p3 = ::strtok(NULL, ";\r\n");
+			char* p4 = ::strtok(NULL, "\r\n");
+
+			if (p1 != NULL && p2 != NULL && p3 != NULL && p4 != NULL ) {
+				CTGReg* tgreg = new CTGReg;
+				tgreg->m_id = std::string(p1);
+				tgreg->m_pc = std::string(p2);
+				tgreg->m_name = std::string(p3);
+				tgreg->m_desc = std::string(p4);
+
+				tgreg->m_name.resize(16U, ' ');
+				tgreg->m_desc.resize(14U, ' ');
+
+				m_currTGList.push_back(tgreg);
+			}
+		}
+
+		::fclose(fp);
+	}
 }
 
 CWiresX::~CWiresX()
@@ -99,7 +130,7 @@ void CWiresX::setInfo(const std::string& name, unsigned int txFrequency, unsigne
 	m_name        = name;
 	m_txFrequency = txFrequency;
 	m_rxFrequency = rxFrequency;
-	m_reflector = reflector;
+	m_dstID = reflector;
 
 	m_name.resize(14U, ' ');
 
@@ -217,7 +248,7 @@ WX_STATUS CWiresX::process(const unsigned char* data, const unsigned char* sourc
 
 int CWiresX::getReflector() const
 {
-	return m_reflector;
+	return m_dstID;
 }
 
 
@@ -262,8 +293,8 @@ WX_STATUS CWiresX::processConnect(const unsigned char* source, const unsigned ch
 
 	std::string id = std::string((char*)data, 6U);
 
-	m_reflector = atoi(id.c_str());
-	if (m_reflector == 0)
+	m_dstID = atoi(id.c_str());
+	if (m_dstID == 0)
 		return WXS_NONE;
 
 	m_status = WXSI_CONNECT;
@@ -274,7 +305,7 @@ WX_STATUS CWiresX::processConnect(const unsigned char* source, const unsigned ch
 
 void CWiresX::processConnect(int reflector)
 {
-	m_reflector = reflector;
+	m_dstID = reflector;
 
 	m_status = WXSI_CONNECT;
 	m_timer.start();
@@ -291,7 +322,7 @@ void CWiresX::processDisconnect(const unsigned char* source)
 
 void CWiresX::clock(unsigned int ms)
 {
-	//m_reflectors.clock(ms);
+	//m_dstIDs.clock(ms);
 
 	m_timer.clock(ms);
 	if (m_timer.isRunning() && m_timer.hasExpired()) {
@@ -474,7 +505,7 @@ void CWiresX::sendDXReply()
 	for (unsigned int i = 0U; i < 14U; i++)
 		data[i + 20U] = m_name.at(i);
 
-	if (m_reflector == 0) {
+	if (m_dstID == 0) {
 		data[34U] = '1';
 		data[35U] = '2';
 
@@ -489,19 +520,19 @@ void CWiresX::sendDXReply()
 		char buf[20];
 		char buf1[20];
 		
-		sprintf(buf, "%05d", m_reflector);
+		sprintf(buf, "%05d", m_dstID);
 		::memcpy(data + 36U, buf, 5U);
 		
-		if (m_reflector > 99999U)
-			sprintf(buf1, "CALL %d", m_reflector);
-		else if (m_reflector == 9U)
+		if (m_dstID > 99999U)
+			sprintf(buf1, "CALL %d", m_dstID);
+		else if (m_dstID == 9U)
 			strcpy(buf1, "LOCAL");
-		else if (m_reflector == 9990U)
+		else if (m_dstID == 9990U)
 			strcpy(buf1, "PARROT");
-		else if (m_reflector == 4000U)
+		else if (m_dstID == 4000U)
 			strcpy(buf1, "UNLINK");
 		else
-			sprintf(buf1, "TG %d", m_reflector);
+			sprintf(buf1, "TG %d", m_dstID);
 
 		int i = strlen(buf1);
 		while (i < 16) {
@@ -547,8 +578,8 @@ void CWiresX::sendDXReply()
 
 void CWiresX::sendConnectReply(unsigned int reflector)
 {
-	m_reflector=reflector;
-	assert(m_reflector != 0);
+	m_dstID=reflector;
+	assert(m_dstID != 0);
 
 	unsigned char data[110U];
 	::memset(data, 0x00U, 110U);
@@ -575,19 +606,19 @@ void CWiresX::sendConnectReply(unsigned int reflector)
 	char buf[20U];
 	char buf1[20U];
 	
-	sprintf(buf, "%05d", m_reflector);
+	sprintf(buf, "%05d", m_dstID);
 	::memcpy(data + 36U, buf, 5U);
 
-	if (m_reflector > 99999U)
-		sprintf(buf1, "CALL %d", m_reflector);
-	else if (m_reflector == 9U)
+	if (m_dstID > 99999U)
+		sprintf(buf1, "CALL %d", m_dstID);
+	else if (m_dstID == 9U)
 		strcpy(buf1, "LOCAL");
-	else if (m_reflector == 9990U)
+	else if (m_dstID == 9990U)
 		strcpy(buf1, "PARROT");
-	else if (m_reflector == 4000U)
+	else if (m_dstID == 4000U)
 		strcpy(buf1, "UNLINK");
 	else
-		sprintf(buf1, "TG %d", m_reflector);
+		sprintf(buf1, "TG %d", m_dstID);
 
 	int i = strlen(buf1);
 	while (i < 16) {
@@ -655,13 +686,8 @@ void CWiresX::sendDisconnectReply()
 
 void CWiresX::sendAllReply()
 {
-/* //	if (m_start == 0U)
-	//	m_reflectors.reload();
-
-	//std::vector<CYSFReflector*>& curr = m_reflectors.current();
-
-//	unsigned char data[1100U];
-//	::memset(data, 0x00U, 1100U);
+	unsigned char data[1100U];
+	::memset(data, 0x00U, 1100U);
 
 	data[0U] = m_seqNo;
 
@@ -677,10 +703,10 @@ void CWiresX::sendAllReply()
 	for (unsigned int i = 0U; i < 10U; i++)
 		data[i + 12U] = m_node.at(i);
 
-	unsigned int total = curr.size();
+	unsigned int total = m_currTGList.size();
 	if (total > 999U) total = 999U;
 
-	unsigned int n = curr.size() - m_start;
+	unsigned int n = total - m_start;
 	if (n > 20U) n = 20U;
 
 	::sprintf((char*)(data + 22U), "%03u%03u", n, total);
@@ -689,26 +715,26 @@ void CWiresX::sendAllReply()
 
 	unsigned int offset = 29U;
 	for (unsigned int j = 0U; j < n; j++, offset += 50U) {
-		CYSFReflector* refl = curr.at(j + m_start);
+		CTGReg* tgreg = m_currTGList.at(j + m_start);
 
 		::memset(data + offset, ' ', 50U);
 
 		data[offset + 0U] = '5';
 
 		for (unsigned int i = 0U; i < 5U; i++)
-			data[i + offset + 1U] = refl->m_id.at(i);
+			data[i + offset + 1U] = tgreg->m_id.at(i);
 
 		for (unsigned int i = 0U; i < 16U; i++)
-			data[i + offset + 6U] = refl->m_name.at(i);
+			data[i + offset + 6U] = tgreg->m_name.at(i);
 
 		for (unsigned int i = 0U; i < 3U; i++)
-			data[i + offset + 22U] = refl->m_count.at(i);
+			data[i + offset + 22U] = '0';
 
 		for (unsigned int i = 0U; i < 10U; i++)
 			data[i + offset + 25U] = ' ';
 
 		for (unsigned int i = 0U; i < 14U; i++)
-			data[i + offset + 35U] = refl->m_desc.at(i);
+			data[i + offset + 35U] = tgreg->m_desc.at(i);
 
 		data[offset + 49U] = 0x0DU;
 	}
@@ -718,93 +744,21 @@ void CWiresX::sendAllReply()
 		data[i + offset] = 0x20U;
 	
 	offset += k;
-    
+
 	data[offset + 0U] = 0x03U;			// End of data marker
 	data[offset + 1U] = CCRC::addCRC(data, offset + 1U);
 
-	CUtils::dump(1U, "ALL Reply", data, offset + 2U);
+	//CUtils::dump(1U, "ALL Reply", data, offset + 2U);
 
 	createReply(data, offset + 2U);
 
-	m_seqNo++; */
+	m_seqNo++;
 }
 
 void CWiresX::sendSearchReply()
 {
-//	if (m_search.size() == 0U) {
-	//	sendSearchNotFoundReply();
-	//	return;
-//	}
-
-	//std::vector<CYSFReflector*>& search = m_reflectors.search(m_search);
-	//if (search.size() == 0U) {
-		sendSearchNotFoundReply();
-		return;
-	/* }
-
-	unsigned char data[1100U];
-	::memset(data, 0x00U, 1100U);
-
-	data[0U] = m_seqNo;
-
-	for (unsigned int i = 0U; i < 4U; i++)
-		data[i + 1U] = ALL_RESP[i];
-
-	data[5U] = '0';
-	data[6U] = '2';
-
-	for (unsigned int i = 0U; i < 5U; i++)
-		data[i + 7U] = m_id.at(i);
-
-	for (unsigned int i = 0U; i < 10U; i++)
-		data[i + 12U] = m_node.at(i);
-
-	data[22U] = '1';
-
-	unsigned int total = search.size();
-	if (total > 999U) total = 999U;
-
-	unsigned int n = search.size();
-	if (n > 20U) n = 20U;
-
-	::sprintf((char*)(data + 23U), "%02u%03u", n, total);
-
-	data[28U] = 0x0DU;
-
-	unsigned int offset = 29U;
-	for (unsigned int j = 0U; j < n; j++, offset += 50U) {
-		CYSFReflector* refl = search.at(j);
-
-		::memset(data + offset, ' ', 50U);
-
-		data[offset + 0U] = '1';
-
-		for (unsigned int i = 0U; i < 5U; i++)
-			data[i + offset + 1U] = refl->m_id.at(i);
-
-		for (unsigned int i = 0U; i < 16U; i++)
-			data[i + offset + 6U] = refl->m_name.at(i);
-
-		for (unsigned int i = 0U; i < 3U; i++)
-			data[i + offset + 22U] = refl->m_count.at(i);
-
-		for (unsigned int i = 0U; i < 10U; i++)
-			data[i + offset + 25U] = ' ';
-
-		for (unsigned int i = 0U; i < 14U; i++)
-			data[i + offset + 35U] = refl->m_desc.at(i);
-
-		data[offset + 49U] = 0x0DU;
-	}
-
-	data[offset + 0U] = 0x03U;			// End of data marker
-	data[offset + 1U] = CCRC::addCRC(data, offset + 1U);
-
-	CUtils::dump(1U, "SEARCH Reply", data, offset + 2U);
-
-	createReply(data, offset + 2U);
-
-	m_seqNo++; */
+	sendSearchNotFoundReply();
+	return;
 }
 
 void CWiresX::sendSearchNotFoundReply()

@@ -227,7 +227,7 @@ int CYSF2DMR::run()
 	CTimer pollTimer(1000U, 5U);
 
 	// CWiresX Control Object
-	m_wiresX = new CWiresX(m_callsign, "R", m_ysfNetwork);
+	m_wiresX = new CWiresX(m_callsign, "R", m_ysfNetwork, m_TGList);
 
 	std::string name = m_conf.getDescription();
 	unsigned int rxFrequency = m_conf.getRxFrequency();
@@ -1040,6 +1040,7 @@ bool CYSF2DMR::createDMRNetwork()
 	m_colorcode = 1U;
 	m_dstid = m_conf.getDMRDstId();
 	m_dmrpc = m_conf.getDMRPC();
+	m_TGList = m_conf.getDMRTGListFile();
 
 	if (m_srcHS > 99999999U)
 		m_defsrcid = m_srcHS / 100U;
@@ -1058,6 +1059,7 @@ bool CYSF2DMR::createDMRNetwork()
 	LogMessage("    Address: %s", address.c_str());
 	LogMessage("    Port: %u", port);
 	LogMessage("    Send 4000 Disconect: %s", (sendDisconnect) ? "YES":"NO");
+	LogMessage("    TGList file: %s", m_TGList.c_str());
 	if (local > 0U)
 		LogMessage("    Local: %u", local);
 	else
