@@ -207,7 +207,7 @@ WX_STATUS CWiresX::process(const unsigned char* data, const unsigned char* sourc
 			processDisconnect(source);
 			return WXS_DISCONNECT;
 		} else {
-			CUtils::dump("Unknown Wires-X command", m_command, fn * 20U);
+			//CUtils::dump("Unknown Wires-X command", m_command, fn * 20U);
 			return WXS_FAIL;
 		}
 	}
@@ -537,7 +537,7 @@ void CWiresX::sendDXReply()
 	data[127U] = 0x03U;			// End of data marker
 	data[128U] = CCRC::addCRC(data, 128U);
 
-	CUtils::dump(1U, "DX Reply", data, 129U);
+	//CUtils::dump(1U, "DX Reply", data, 129U);
 
 	createReply(data, 129U);
 
@@ -601,7 +601,7 @@ void CWiresX::sendConnectReply(unsigned int reflector)
 	data[89U] = 0x03U;			// End of data marker
 	data[90U] = CCRC::addCRC(data, 90U);
 
-	CUtils::dump(1U, "CONNECT Reply", data, 91U);
+	//CUtils::dump(1U, "CONNECT Reply", data, 91U);
 
 	createReply(data, 91U);
 
@@ -638,7 +638,7 @@ void CWiresX::sendDisconnectReply()
 	data[89U] = 0x03U;			// End of data marker
 	data[90U] = CCRC::addCRC(data, 90U);
 
-	CUtils::dump(1U, "DISCONNECT Reply", data, 91U);
+	//CUtils::dump(1U, "DISCONNECT Reply", data, 91U);
 
 	createReply(data, 91U);
 
@@ -830,7 +830,7 @@ void CWiresX::sendSearchNotFoundReply()
 	data[29U] = 0x03U;			// End of data marker
 	data[30U] = CCRC::addCRC(data, 30U);
 
-	CUtils::dump(1U, "SEARCH Reply", data, 31U);
+	//CUtils::dump(1U, "SEARCH Reply", data, 31U);
 
 	createReply(data, 31U);
 

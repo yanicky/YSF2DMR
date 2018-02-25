@@ -281,7 +281,7 @@ bool CYSFPayload::readDataFRModeData1(const unsigned char* data, unsigned char* 
 		for (unsigned int i = 0U; i < 20U; i++)
 			output[i] ^= WHITENING_DATA[i];
 
-		CUtils::dump(1U, "FR Mode Data 1", output, 20U);
+		// CUtils::dump(1U, "FR Mode Data 1", output, 20U);
 
 		::memcpy(dt, output, 20U);
 	}
@@ -328,7 +328,7 @@ bool CYSFPayload::readDataFRModeData2(const unsigned char* data, unsigned char* 
 		for (unsigned int i = 0U; i < 20U; i++)
 			output[i] ^= WHITENING_DATA[i];
 
-		CUtils::dump(1U, "FR Mode Data 2", output, 20U);
+		// CUtils::dump(1U, "FR Mode Data 2", output, 20U);
 
 		::memcpy(dt, output, 20U);
 	}
@@ -417,7 +417,7 @@ bool CYSFPayload::readVDMode1Data(const unsigned char* data, unsigned char* dt)
 		for (unsigned int i = 0U; i < 20U; i++)
 			output[i] ^= WHITENING_DATA[i];
 
-		CUtils::dump(1U, "V/D Mode 1 Data", output, 20U);
+		// CUtils::dump(1U, "V/D Mode 1 Data", output, 20U);
 
 		::memcpy(dt, output, 20U);
 	}
@@ -463,7 +463,7 @@ bool CYSFPayload::readVDMode2Data(const unsigned char* data, unsigned char* dt)
 		for (unsigned int i = 0U; i < 10U; i++)
 			output[i] ^= WHITENING_DATA[i];
 
-		CUtils::dump(1U, "V/D Mode 2 Data", output, YSF_CALLSIGN_LENGTH);
+		// CUtils::dump(1U, "V/D Mode 2 Data", output, YSF_CALLSIGN_LENGTH);
 
 		::memcpy(dt, output, YSF_CALLSIGN_LENGTH);
 	}
