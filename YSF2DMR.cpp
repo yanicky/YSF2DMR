@@ -1001,8 +1001,6 @@ unsigned int CYSF2DMR::findYSFID(std::string cs)
 	int mid1 = cs.find_last_of('-');
 	int mid2 = cs.find_last_of('/');
 	int last = cs.find_last_not_of(' ');
-	
-	LogMessage("ID: first:%d mid1:%d mid2:%d last:%d", first, mid1, mid2, last);
 
 	if (mid1 == -1 && mid2 == -1)
 		cstrim = cs.substr(first, (last - first + 1));
