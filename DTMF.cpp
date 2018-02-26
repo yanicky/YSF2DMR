@@ -179,12 +179,14 @@ WX_STATUS CDTMF::validate() const
 	return WXS_CONNECT;
 }
 
-std::string CDTMF::getDstID()
+unsigned int CDTMF::getDstID()
 {
 	std::string command = m_command;
 	reset();
+	
+	std::string id = command.substr(1U);
 
-	return command.substr(1U);
+	return atoi(id.c_str());
 }
 
 void CDTMF::reset()

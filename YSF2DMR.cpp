@@ -269,7 +269,7 @@ int CYSF2DMR::run()
 		switch (TG_connect_state) {
 			case WAITING_UNLINK:
 				if (unlinkReceived) {
-					LogMessage("Unlink Received");
+					//LogMessage("Unlink Received");
 					TGChange.start();
 					TG_connect_state = SEND_REPLY;
 					unlinkReceived = false;
@@ -286,9 +286,8 @@ int CYSF2DMR::run()
 				if (TGChange.elapsed() > 600) {
 					TGChange.start();
 					TG_connect_state = NONE;
-					LogMessage("Sending PTT: Src: %s Dst: %s %d", m_ysfSrc.c_str(), m_next_pc ? "" : "TG", m_next_dstid);
-					m_srcid = findYSFID(m_ysfSrc);
-					SendDummyDMR(m_srcid, m_next_dstid, m_next_pc ? FLCO_USER_USER : FLCO_GROUP);
+					LogMessage("Sending PTT: Src: %s Dst: %s %d", m_ysfSrc.c_str(), m_ptt_pc ? "" : "TG", m_ptt_dstid);
+					SendDummyDMR(m_srcid, m_ptt_dstid, m_ptt_pc ? FLCO_USER_USER : FLCO_GROUP);
 				}
 				break;
 			default: 
@@ -312,29 +311,25 @@ int CYSF2DMR::run()
 				
 				WX_STATUS status = m_wiresX->process(buffer + 35U, buffer + 14U, fi, dt, fn, ft);
 
-				unsigned char buf[10U];
-
 				switch (status) {
-					case WXS_CONNECT:						
-						::memcpy(buf, buffer + 14U, 6U);
-						buf[6U] = 0U;
-						m_ysfSrc = reinterpret_cast<char const*>(buf);
+					case WXS_CONNECT:
+						m_ysfSrc = getSrcYSF(buffer);
 						m_srcid = findYSFID(m_ysfSrc);
-							
-						m_next_dstid = m_wiresX->getDstID();
-						m_next_pc = m_wiresX->getPC(m_next_dstid);
 
-						if (m_next_dstid == 9990U)
+						m_ptt_dstid = m_wiresX->getDstID();
+						m_ptt_pc = m_wiresX->getPC(m_ptt_dstid);
+
+						if (m_ptt_dstid == 9990U)
 							m_dmrflco = FLCO_USER_USER;
 						else
 							m_dmrflco = FLCO_GROUP;
 
-						if (m_next_pc)
+						if (m_ptt_pc)
 							m_dstid = 9U;
 						else
-							m_dstid = m_next_dstid;
+							m_dstid = m_ptt_dstid;
 
-						LogMessage("Connect to %s %d has been requested by %10.10s", m_next_pc ? "" : "TG", m_next_dstid, buffer + 14U);
+						LogMessage("Connect to %s %d has been requested by %10.10s", m_ptt_pc ? "" : "TG", m_ptt_dstid, buffer + 14U);
 
 						if (sendDisconnect) {
 							LogMessage("Sending DMR Disconnect: Src: %s Dst: TG 4000", m_ysfSrc.c_str());
@@ -354,13 +349,11 @@ int CYSF2DMR::run()
 
 					case WXS_DISCONNECT:
 						LogMessage("Disconnect has been requested by %10.10s", buffer + 14U);
-						::memcpy(buf, buffer + 14U, 6U);
-						buf[6U] = 0U;
 
-						m_dstid = 9U;
-						m_next_dstid = 9U;
-						m_ysfSrc = reinterpret_cast<char const*>(buf);
+						m_ysfSrc = getSrcYSF(buffer);
 						m_srcid = findYSFID(m_ysfSrc);
+						m_dstid = 9U;
+						m_ptt_dstid = 9U;
 
 						SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 
@@ -400,34 +393,29 @@ int CYSF2DMR::run()
 				}
 
 				status = WXS_NONE;
-				std::string id;
 
 				if (dt == YSF_DT_VD_MODE2)
 					status = m_dtmf->decodeVDMode2(buffer + 35U, (buffer[34U] & 0x01U) == 0x01U);
 
 				switch (status) {
 					case WXS_CONNECT:
-						::memcpy(buf, buffer + 14U, 6U);
-						buf[6U] = 0U;
-
-						m_ysfSrc = reinterpret_cast<char const*>(buf);
+						m_ysfSrc = getSrcYSF(buffer);
 						m_srcid = findYSFID(m_ysfSrc);
 
-						id = m_dtmf->getDstID();
-						m_next_dstid = atoi(id.c_str());
-						m_next_pc = m_wiresX->getPC(m_next_dstid);
+						m_ptt_dstid = m_dtmf->getDstID();
+						m_ptt_pc = m_wiresX->getPC(m_ptt_dstid);
 						
-						if (m_next_dstid == 9990U)
+						if (m_ptt_dstid == 9990U)
 							m_dmrflco = FLCO_USER_USER;
 						else
 							m_dmrflco = FLCO_GROUP;
 
-						if (m_next_pc)
+						if (m_ptt_pc)
 							m_dstid = 9U;
 						else
-							m_dstid = m_next_dstid;
+							m_dstid = m_ptt_dstid;
 
-						LogMessage("Connect to %s %d via DTMF has been requested by %10.10s", m_next_pc ? "" : "TG", m_next_dstid, buffer + 14U);
+						LogMessage("Connect to %s %d via DTMF has been requested by %10.10s", m_ptt_pc ? "" : "TG", m_ptt_dstid, buffer + 14U);
 
 						if (sendDisconnect) {
 							LogMessage("Sending DMR Disconnect: Src: %s Dst: TG 4000", m_ysfSrc.c_str());
@@ -443,15 +431,12 @@ int CYSF2DMR::run()
 						break;
 
 					case WXS_DISCONNECT:
-						::memcpy(buf, buffer + 14U, 6U);
-						buf[6U] = 0U;
-
 						LogMessage("Disconnect via DTMF has been requested by %10.10s", buffer + 14U);
 
-						m_dstid = 9U;
-						m_next_dstid = 9U;
-						m_ysfSrc = reinterpret_cast<char const*>(buf);
+						m_ysfSrc = getSrcYSF(buffer);
 						m_srcid = findYSFID(m_ysfSrc);
+						m_dstid = 9U;
+						m_ptt_dstid = 9U;
 
 						SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 
@@ -1019,6 +1004,16 @@ unsigned int CYSF2DMR::findYSFID(std::string cs)
 		LogMessage("DMR ID of %s: %u, DstID: %s %u", cstrim.c_str(), id, dmrpc ? "" : "TG", m_dstid);
 
 	return id;
+}
+
+std::string CYSF2DMR::getSrcYSF(const unsigned char* buffer)
+{
+	unsigned char temp[YSF_CALLSIGN_LENGTH + 1U];
+
+	::memcpy(temp, buffer + 14U, YSF_CALLSIGN_LENGTH);
+	temp[YSF_CALLSIGN_LENGTH] = 0U;
+	
+	return reinterpret_cast<char const*>(temp);
 }
 
 bool CYSF2DMR::createDMRNetwork()

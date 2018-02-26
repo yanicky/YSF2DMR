@@ -77,8 +77,8 @@ private:
 	unsigned int     m_srcid;
 	unsigned int     m_defsrcid;
 	unsigned int     m_dstid;
-	unsigned int     m_next_dstid;
-	bool             m_next_pc;
+	unsigned int     m_ptt_dstid;
+	bool             m_ptt_pc;
 	bool             m_dmrpc;
 	std::string      m_netSrc;
 	std::string      m_netDst;
@@ -97,8 +97,10 @@ private:
 
 	bool createDMRNetwork();
 	void createGPS();
-	void SendDummyDMR(unsigned int srcid, unsigned int dstid, FLCO dmr_flco);	
+	void SendDummyDMR(unsigned int srcid, unsigned int dstid, FLCO dmr_flco);
 	unsigned int findYSFID(std::string cs);
+	std::string getSrcYSF(const unsigned char* source);
+	
 };
 
 #endif

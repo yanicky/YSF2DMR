@@ -314,7 +314,7 @@ void CWiresX::processAll(const unsigned char* source, const unsigned char* data)
 
 WX_STATUS CWiresX::processConnect(const unsigned char* source, const unsigned char* data)
 {
-	::LogDebug("Received Connect to %6.6s from %10.10s", data, source);
+	//::LogDebug("Received Connect to %6.6s from %10.10s", data, source);
 
 	std::string id = std::string((char*)data, 6U);
 

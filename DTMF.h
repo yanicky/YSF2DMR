@@ -32,7 +32,7 @@ public:
 
 	WX_STATUS decodeVDMode2(const unsigned char* payload, bool end);
 
-	std::string getDstID();
+	unsigned int getDstID();
 
 	void reset();
 
