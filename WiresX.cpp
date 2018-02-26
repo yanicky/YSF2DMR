@@ -32,6 +32,7 @@
 #include <cassert>
 #include <cstring>
 #include <cstdlib>
+#include <cctype>
 
 const unsigned char DX_REQ[]    = {0x5DU, 0x71U, 0x5FU};
 const unsigned char CONN_REQ[]  = {0x5DU, 0x23U, 0x5FU};
