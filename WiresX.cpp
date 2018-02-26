@@ -26,6 +26,7 @@
 #include "CRC.h"
 #include "Log.h"
 
+#include <algorithm>
 #include <functional>
 #include <cstdio>
 #include <cassert>
