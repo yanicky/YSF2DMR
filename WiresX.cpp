@@ -126,7 +126,7 @@ CWiresX::~CWiresX()
 	delete[] m_command;
 }
 
-void CWiresX::setInfo(const std::string& name, unsigned int txFrequency, unsigned int rxFrequency, int reflector)
+void CWiresX::setInfo(const std::string& name, unsigned int txFrequency, unsigned int rxFrequency, int dstID)
 {
 	assert(txFrequency > 0U);
 	assert(rxFrequency > 0U);
@@ -134,7 +134,7 @@ void CWiresX::setInfo(const std::string& name, unsigned int txFrequency, unsigne
 	m_name        = name;
 	m_txFrequency = txFrequency;
 	m_rxFrequency = rxFrequency;
-	m_dstID = reflector;
+	m_dstID = dstID;
 
 	m_name.resize(14U, ' ');
 
@@ -250,11 +250,32 @@ WX_STATUS CWiresX::process(const unsigned char* data, const unsigned char* sourc
 	return WXS_NONE;
 }
 
-int CWiresX::getReflector() const
+unsigned int CWiresX::getDstID()
 {
 	return m_dstID;
 }
 
+bool CWiresX::getPC(unsigned int id)
+{
+	char dstid[20];
+	std::string pc;
+
+	sprintf(dstid, "%05d", id);
+	dstid[5U] = 0;
+
+	for (std::vector<CTGReg*>::iterator it = m_currTGList.begin(); it != m_currTGList.end(); ++it) {
+		std::string tgid = (*it)->m_id;
+		if (dstid == tgid) {
+			pc = (*it)->m_pc;
+			break;
+		}
+	}
+	
+	if (pc == "1")
+		return true;
+
+	return false;
+}
 
 void CWiresX::processDX(const unsigned char* source)
 {
@@ -307,9 +328,9 @@ WX_STATUS CWiresX::processConnect(const unsigned char* source, const unsigned ch
 	return WXS_CONNECT;
 }
 
-void CWiresX::processConnect(int reflector)
+void CWiresX::processConnect(int dstID)
 {
-	m_dstID = reflector;
+	m_dstID = dstID;
 
 	m_status = WXSI_CONNECT;
 	m_timer.start();
@@ -326,8 +347,6 @@ void CWiresX::processDisconnect(const unsigned char* source)
 
 void CWiresX::clock(unsigned int ms)
 {
-	//m_dstIDs.clock(ms);
-
 	m_timer.clock(ms);
 	if (m_timer.isRunning() && m_timer.hasExpired()) {
 		switch (m_status) {
@@ -580,9 +599,9 @@ void CWiresX::sendDXReply()
 	m_seqNo++;
 }
 
-void CWiresX::sendConnectReply(unsigned int reflector)
+void CWiresX::sendConnectReply(unsigned int dstID)
 {
-	m_dstID=reflector;
+	m_dstID = dstID;
 	assert(m_dstID != 0);
 
 	unsigned char data[110U];
@@ -833,7 +852,7 @@ void CWiresX::sendSearchReply()
 	data[offset + 0U] = 0x03U;			// End of data marker
 	data[offset + 1U] = CCRC::addCRC(data, offset + 1U);
 
-	CUtils::dump(1U, "SEARCH Reply", data, offset + 2U);
+	//CUtils::dump(1U, "SEARCH Reply", data, offset + 2U);
 
 	createReply(data, offset + 2U);
 
@@ -868,11 +887,11 @@ std::vector<CTGReg*>& CWiresX::TGSearch(const std::string& name)
 	unsigned int len = trimmed.size();
 
 	for (std::vector<CTGReg*>::iterator it = m_currTGList.begin(); it != m_currTGList.end(); ++it) {
-		std::string tgreg = (*it)->m_name;
-		tgreg.erase(std::find_if(tgreg.rbegin(), tgreg.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), tgreg.end());
-		std::transform(tgreg.begin(), tgreg.end(), tgreg.begin(), ::toupper);
+		std::string tgname = (*it)->m_name;
+		tgname.erase(std::find_if(tgname.rbegin(), tgname.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), tgname.end());
+		std::transform(tgname.begin(), tgname.end(), tgname.begin(), ::toupper);
 
-		if (trimmed == tgreg.substr(0U, len))
+		if (trimmed == tgname.substr(0U, len))
 			m_TGSearch.push_back(*it);
 	}
 

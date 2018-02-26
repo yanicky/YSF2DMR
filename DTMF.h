@@ -1,5 +1,7 @@
 /*
  *   Copyright (C) 2012,2013,2017 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2018 by Manuel Sanchez EA7EE
+ *   Copyright (C) 2018 by Andy Uribe CA6JAU
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -30,7 +32,7 @@ public:
 
 	WX_STATUS decodeVDMode2(const unsigned char* payload, bool end);
 
-	std::string getReflector();
+	std::string getDstID();
 
 	void reset();
 

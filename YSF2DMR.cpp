@@ -217,11 +217,10 @@ int CYSF2DMR::run()
 	m_lookup = new CDMRLookup(lookupFile, reloadTime);
 	m_lookup->read();
 
-	FLCO dmrflco;
 	if (m_dmrpc)
-		dmrflco = FLCO_USER_USER;
+		m_dmrflco = FLCO_USER_USER;
 	else
-		dmrflco = FLCO_GROUP;
+		m_dmrflco = FLCO_GROUP;
 
 	CTimer networkWatchdog(100U, 0U, 1500U);
 	CTimer pollTimer(1000U, 5U);
@@ -273,7 +272,6 @@ int CYSF2DMR::run()
 					LogMessage("Unlink Received");
 					TGChange.start();
 					TG_connect_state = SEND_REPLY;
-					m_dstid = m_next_dstid;
 					unlinkReceived = false;
 				}
 				break;
@@ -288,9 +286,9 @@ int CYSF2DMR::run()
 				if (TGChange.elapsed() > 600) {
 					TGChange.start();
 					TG_connect_state = NONE;
-					LogMessage("Sending PTT: Src: %s Dst: TG %d", m_ysfSrc.c_str(), m_next_dstid);
+					LogMessage("Sending PTT: Src: %s Dst: %s %d", m_ysfSrc.c_str(), m_next_pc ? "" : "TG", m_next_dstid);
 					m_srcid = findYSFID(m_ysfSrc);
-					SendDummyDMR(m_srcid, m_next_dstid, FLCO_GROUP);
+					SendDummyDMR(m_srcid, m_next_dstid, m_next_pc ? FLCO_USER_USER : FLCO_GROUP);
 				}
 				break;
 			default: 
@@ -314,42 +312,39 @@ int CYSF2DMR::run()
 				
 				WX_STATUS status = m_wiresX->process(buffer + 35U, buffer + 14U, fi, dt, fn, ft);
 
+				unsigned char buf[10U];
+
 				switch (status) {
-					case WXS_CONNECT:
-						m_next_dstid = m_wiresX->getReflector();
+					case WXS_CONNECT:						
+						::memcpy(buf, buffer + 14U, 6U);
+						buf[6U] = 0U;
+						m_ysfSrc = reinterpret_cast<char const*>(buf);
+						m_srcid = findYSFID(m_ysfSrc);
+							
+						m_next_dstid = m_wiresX->getDstID();
+						m_next_pc = m_wiresX->getPC(m_next_dstid);
 
 						if (m_next_dstid == 9990U)
-							dmrflco = FLCO_USER_USER;
+							m_dmrflco = FLCO_USER_USER;
 						else
-							dmrflco = FLCO_GROUP;
+							m_dmrflco = FLCO_GROUP;
 
-						if (m_next_dstid == 4000U)
-							continue;
+						if (m_next_pc)
+							m_dstid = 9U;
+						else
+							m_dstid = m_next_dstid;
 
-						LogMessage("Connect to %d has been requested by %10.10s", m_next_dstid, buffer + 14U);
+						LogMessage("Connect to %s %d has been requested by %10.10s", m_next_pc ? "" : "TG", m_next_dstid, buffer + 14U);
 
-						if (sendDisconnect && (m_dstid != 9U)) {
-							unsigned char buf[10U];
-
-							::memcpy(buf, buffer + 14U, 6U);
-							buf[6U] = 0U;
-
-							m_dstid = 4000U;
-
-							m_ysfSrc = reinterpret_cast<char const*>(buf);
-							
-							LogMessage("Sending DMR Disconnect: Src: %s Dst: 4000", m_ysfSrc.c_str());
-
-							m_srcid = findYSFID(m_ysfSrc);
+						if (sendDisconnect) {
+							LogMessage("Sending DMR Disconnect: Src: %s Dst: TG 4000", m_ysfSrc.c_str());
 
 							SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 
 							unlinkReceived = false;
 							TG_connect_state = WAITING_UNLINK;
-						} else {
-							m_dstid = m_next_dstid;
+						} else 
 							TG_connect_state = SEND_REPLY;
-						}
 
 						TGChange.start();
 						break;
@@ -359,11 +354,10 @@ int CYSF2DMR::run()
 
 					case WXS_DISCONNECT:
 						LogMessage("Disconnect has been requested by %10.10s", buffer + 14U);
-						unsigned char buf[10U];
 						::memcpy(buf, buffer + 14U, 6U);
 						buf[6U] = 0U;
 
-						m_dstid = 4000U;
+						m_dstid = 9U;
 						m_next_dstid = 9U;
 						m_ysfSrc = reinterpret_cast<char const*>(buf);
 						m_srcid = findYSFID(m_ysfSrc);
@@ -413,50 +407,48 @@ int CYSF2DMR::run()
 
 				switch (status) {
 					case WXS_CONNECT:
-						id = m_dtmf->getReflector();
+						::memcpy(buf, buffer + 14U, 6U);
+						buf[6U] = 0U;
+
+						m_ysfSrc = reinterpret_cast<char const*>(buf);
+						m_srcid = findYSFID(m_ysfSrc);
+
+						id = m_dtmf->getDstID();
 						m_next_dstid = atoi(id.c_str());
-						
-						if (m_next_dstid == 4000U)
-							continue;
+						m_next_pc = m_wiresX->getPC(m_next_dstid);
 						
 						if (m_next_dstid == 9990U)
-							dmrflco = FLCO_USER_USER;
+							m_dmrflco = FLCO_USER_USER;
 						else
-							dmrflco = FLCO_GROUP;
+							m_dmrflco = FLCO_GROUP;
 
-						LogMessage("Connect to %d has been requested by %10.10s", m_next_dstid, buffer + 14U);
+						if (m_next_pc)
+							m_dstid = 9U;
+						else
+							m_dstid = m_next_dstid;
 
-						if (sendDisconnect && (m_dstid != 9U)) {
-							unsigned char buf[10U];
-							::memcpy(buf, buffer + 14U, 6U);
-							buf[6U] = 0U;
+						LogMessage("Connect to %s %d via DTMF has been requested by %10.10s", m_next_pc ? "" : "TG", m_next_dstid, buffer + 14U);
 
-							m_dstid = 4000U;
-							m_ysfSrc = reinterpret_cast<char const*>(buf);
-							m_srcid = findYSFID(m_ysfSrc);
-
-							LogMessage("Sending DMR Disconnect: Src: %s Dst: 4000", m_ysfSrc.c_str());
+						if (sendDisconnect) {
+							LogMessage("Sending DMR Disconnect: Src: %s Dst: TG 4000", m_ysfSrc.c_str());
 
 							SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 							
 							unlinkReceived = false;
 							TG_connect_state = WAITING_UNLINK;
-						} else {
-							m_dstid = m_next_dstid;
+						} else
 							TG_connect_state = SEND_REPLY;
-						}
 
 						TGChange.start();
 						break;
 
 					case WXS_DISCONNECT:
-						unsigned char buf[10U];
 						::memcpy(buf, buffer + 14U, 6U);
 						buf[6U] = 0U;
 
 						LogMessage("Disconnect via DTMF has been requested by %10.10s", buffer + 14U);
 
-						m_dstid = 4000U;
+						m_dstid = 9U;
 						m_next_dstid = 9U;
 						m_ysfSrc = reinterpret_cast<char const*>(buf);
 						m_srcid = findYSFID(m_ysfSrc);
@@ -494,7 +486,7 @@ int CYSF2DMR::run()
 				rx_dmrdata.setSlotNo(2U);
 				rx_dmrdata.setSrcId(m_srcid);
 				rx_dmrdata.setDstId(m_dstid);
-				rx_dmrdata.setFLCO(dmrflco);
+				rx_dmrdata.setFLCO(m_dmrflco);
 				rx_dmrdata.setN(0U);
 				rx_dmrdata.setSeqNo(0U);
 				rx_dmrdata.setBER(0U);
@@ -511,7 +503,7 @@ int CYSF2DMR::run()
 				slotType.getData(m_dmrFrame);
 	
 				// Full LC
-				CDMRLC dmrLC = CDMRLC(dmrflco, m_srcid, m_dstid);
+				CDMRLC dmrLC = CDMRLC(m_dmrflco, m_srcid, m_dstid);
 				CDMRFullLC fullLC;
 				fullLC.encode(dmrLC, m_dmrFrame, DT_VOICE_LC_HEADER);
 				m_EmbeddedLC.setLC(dmrLC);
@@ -541,7 +533,7 @@ int CYSF2DMR::run()
 						rx_dmrdata.setSlotNo(2U);
 						rx_dmrdata.setSrcId(m_srcid);
 						rx_dmrdata.setDstId(m_dstid);
-						rx_dmrdata.setFLCO(dmrflco);
+						rx_dmrdata.setFLCO(m_dmrflco);
 						rx_dmrdata.setN(n_dmr);
 						rx_dmrdata.setSeqNo(dmr_cnt);
 						rx_dmrdata.setBER(0U);
@@ -571,7 +563,7 @@ int CYSF2DMR::run()
 				rx_dmrdata.setSlotNo(2U);
 				rx_dmrdata.setSrcId(m_srcid);
 				rx_dmrdata.setDstId(m_dstid);
-				rx_dmrdata.setFLCO(dmrflco);
+				rx_dmrdata.setFLCO(m_dmrflco);
 				rx_dmrdata.setN(n_dmr);
 				rx_dmrdata.setSeqNo(dmr_cnt);
 				rx_dmrdata.setBER(0U);
@@ -588,7 +580,7 @@ int CYSF2DMR::run()
 				slotType.getData(m_dmrFrame);
 	
 				// Full LC
-				CDMRLC dmrLC = CDMRLC(dmrflco, m_srcid, m_dstid);
+				CDMRLC dmrLC = CDMRLC(m_dmrflco, m_srcid, m_dstid);
 				CDMRFullLC fullLC;
 				fullLC.encode(dmrLC, m_dmrFrame, DT_TERMINATOR_WITH_LC);
 				
@@ -606,7 +598,7 @@ int CYSF2DMR::run()
 				rx_dmrdata.setSlotNo(2U);
 				rx_dmrdata.setSrcId(m_srcid);
 				rx_dmrdata.setDstId(m_dstid);
-				rx_dmrdata.setFLCO(dmrflco);
+				rx_dmrdata.setFLCO(m_dmrflco);
 				rx_dmrdata.setN(n_dmr);
 				rx_dmrdata.setSeqNo(dmr_cnt);
 				rx_dmrdata.setBER(0U);
@@ -617,7 +609,7 @@ int CYSF2DMR::run()
 					// Add sync
 					CSync::addDMRAudioSync(m_dmrFrame, 0U);
 					// Prepare Full LC data
-					CDMRLC dmrLC = CDMRLC(dmrflco, m_srcid, m_dstid);
+					CDMRLC dmrLC = CDMRLC(m_dmrflco, m_srcid, m_dstid);
 					// Configure the Embedded LC
 					m_EmbeddedLC.setLC(dmrLC);
 				}
@@ -996,6 +988,7 @@ void CYSF2DMR::SendDummyDMR(unsigned int srcid,unsigned int dstid, FLCO dmr_flco
 unsigned int CYSF2DMR::findYSFID(std::string cs)
 {
 	std::string cstrim;
+	bool dmrpc = false;
 
 	int first = cs.find_first_not_of(' ');
 	int mid1 = cs.find_last_of('-');
@@ -1013,12 +1006,17 @@ unsigned int CYSF2DMR::findYSFID(std::string cs)
 
 	unsigned int id = m_lookup->findID(cstrim);
 
+	if (m_dmrflco == FLCO_USER_USER)
+		dmrpc = true;
+	else if (m_dmrflco == FLCO_GROUP)
+		dmrpc = false;
+
 	if (id == 0) {
 		id = m_defsrcid;
-		LogMessage("Not DMR ID found, using default ID: %u, DstID: %s %u", id, m_dmrpc ? "" : "TG", m_dstid);
+		LogMessage("Not DMR ID found, using default ID: %u, DstID: %s %u", id, dmrpc ? "" : "TG", m_dstid);
 	}
 	else
-		LogMessage("DMR ID of %s: %u, DstID: %s %u", cstrim.c_str(), id, m_dmrpc ? "" : "TG", m_dstid);
+		LogMessage("DMR ID of %s: %u, DstID: %s %u", cstrim.c_str(), id, dmrpc ? "" : "TG", m_dstid);
 
 	return id;
 }

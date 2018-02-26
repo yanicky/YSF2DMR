@@ -1,6 +1,8 @@
 /*
  *   Copyright (C) 2012,2013,2015,2017 by Jonathan Naylor G4KLX
  *   Copyright (C) 2011 by DV Developer Group. DJ0ABR
+ *   Copyright (C) 2018 by Manuel Sanchez EA7EE
+ *   Copyright (C) 2018 by Andy Uribe CA6JAU
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -177,7 +179,7 @@ WX_STATUS CDTMF::validate() const
 	return WXS_CONNECT;
 }
 
-std::string CDTMF::getReflector()
+std::string CDTMF::getDstID()
 {
 	std::string command = m_command;
 	reset();

@@ -78,6 +78,7 @@ private:
 	unsigned int     m_defsrcid;
 	unsigned int     m_dstid;
 	unsigned int     m_next_dstid;
+	bool             m_next_pc;
 	bool             m_dmrpc;
 	std::string      m_netSrc;
 	std::string      m_netDst;
@@ -92,6 +93,7 @@ private:
 	unsigned int     m_ysfFrames;
 	CDMREmbeddedData m_EmbeddedLC;
 	std::string      m_TGList;
+	FLCO             m_dmrflco;
 
 	bool createDMRNetwork();
 	void createGPS();

@@ -72,7 +72,8 @@ public:
 
 	WX_STATUS process(const unsigned char* data, const unsigned char* source, unsigned char fi, unsigned char dt, unsigned char fn, unsigned char ft);
 
-	int getReflector() const;
+	unsigned int getDstID();
+	bool getPC(unsigned int id);
 
 	std::vector<CTGReg*>& TGSearch(const std::string& name);
 

@@ -17,10 +17,10 @@
 00913;0;English;English
 00914;0;Spanish;Spanish
 03100;0;USA Nationwide;USA Nationwide
-04300;0;Ref France;France
-04326;0;Ref Canada;Canada
-04400;0;Ref UK;United Kingdom
-04426;0;Ref Allstar;Allstar Link
-04639;0;Ref WorldWide;WorldWide
-04640;0;Ref USA;USA - Area 0
-04790;0;Ref Mexico;XE (334)
+04300;1;Ref France;France
+04326;1;Ref Canada;Canada
+04400;1;Ref UK;United Kingdom
+04426;1;Ref Allstar;Allstar Link
+04639;1;Ref WorldWide;WorldWide
+04640;1;Ref USA;USA - Area 0
+04790;1;Ref Mexico;XE (334)
