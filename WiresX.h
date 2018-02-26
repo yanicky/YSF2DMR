@@ -74,6 +74,8 @@ public:
 
 	int getReflector() const;
 
+	std::vector<CTGReg*>& TGSearch(const std::string& name);
+
 	void processConnect(int reflector);
 	void processDisconnect(const unsigned char* source = NULL);
     void setInfo(const std::string& name, unsigned int txFrequency, unsigned int rxFrequency, int reflector);
@@ -101,6 +103,7 @@ private:
 	unsigned int         m_start;
 	std::string          m_search;
 	std::vector<CTGReg*> m_currTGList;
+	std::vector<CTGReg*> m_TGSearch;
 
 	WX_STATUS processConnect(const unsigned char* source, const unsigned char* data);
 	void processDX(const unsigned char* source);

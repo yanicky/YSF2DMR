@@ -26,8 +26,10 @@
 #include "CRC.h"
 #include "Log.h"
 
+#include <functional>
 #include <cstdio>
 #include <cassert>
+#include <cstring>
 #include <cstdlib>
 
 const unsigned char DX_REQ[]    = {0x5DU, 0x71U, 0x5FU};
@@ -757,8 +759,124 @@ void CWiresX::sendAllReply()
 
 void CWiresX::sendSearchReply()
 {
-	sendSearchNotFoundReply();
-	return;
+	if (m_search.size() == 0U) {
+		sendSearchNotFoundReply();
+		return;
+	}
+
+	std::vector<CTGReg*> search = TGSearch(m_search);
+	if (search.size() == 0U) {
+		sendSearchNotFoundReply();
+		return;
+	}
+
+	unsigned char data[1100U];
+	::memset(data, 0x00U, 1100U);
+
+	data[0U] = m_seqNo;
+
+	for (unsigned int i = 0U; i < 4U; i++)
+		data[i + 1U] = ALL_RESP[i];
+
+	data[5U] = '0';
+	data[6U] = '2';
+
+	for (unsigned int i = 0U; i < 5U; i++)
+		data[i + 7U] = m_id.at(i);
+
+	for (unsigned int i = 0U; i < 10U; i++)
+		data[i + 12U] = m_node.at(i);
+
+	data[22U] = '1';
+
+	unsigned int total = search.size();
+	if (total > 999U) total = 999U;
+
+	unsigned int n = search.size();
+	if (n > 20U) n = 20U;
+
+	::sprintf((char*)(data + 23U), "%02u%03u", n, total);
+
+	data[28U] = 0x0DU;
+
+	unsigned int offset = 29U;
+	for (unsigned int j = 0U; j < n; j++, offset += 50U) {
+		CTGReg* tgreg = search.at(j);
+
+		::memset(data + offset, ' ', 50U);
+
+		data[offset + 0U] = '1';
+
+		std::string tgname = tgreg->m_name;
+		std::transform(tgname.begin(), tgname.end(), tgname.begin(), ::toupper);
+
+		for (unsigned int i = 0U; i < 5U; i++)
+			data[i + offset + 1U] = tgreg->m_id.at(i);
+
+		for (unsigned int i = 0U; i < 16U; i++)
+			data[i + offset + 6U] = tgname.at(i);
+
+		for (unsigned int i = 0U; i < 3U; i++)
+			data[i + offset + 22U] = '0';
+
+		for (unsigned int i = 0U; i < 10U; i++)
+			data[i + offset + 25U] = ' ';
+
+		for (unsigned int i = 0U; i < 14U; i++)
+			data[i + offset + 35U] = tgreg->m_desc.at(i);
+
+		data[offset + 49U] = 0x0DU;
+	}
+
+	data[offset + 0U] = 0x03U;			// End of data marker
+	data[offset + 1U] = CCRC::addCRC(data, offset + 1U);
+
+	CUtils::dump(1U, "SEARCH Reply", data, offset + 2U);
+
+	createReply(data, offset + 2U);
+
+	m_seqNo++;
+}
+
+static bool refComparison(const CTGReg* r1, const CTGReg* r2)
+{
+	assert(r1 != NULL);
+	assert(r2 != NULL);
+
+	std::string name1 = r1->m_name;
+	std::string name2 = r2->m_name;
+
+	for (unsigned int i = 0U; i < 16U; i++) {
+		int c = ::toupper(name1.at(i)) - ::toupper(name2.at(i));
+		if (c != 0)
+			return c < 0;
+	}
+
+	return false;
+}
+
+std::vector<CTGReg*>& CWiresX::TGSearch(const std::string& name)
+{
+	m_TGSearch.clear();
+
+	std::string trimmed = name;
+	trimmed.erase(std::find_if(trimmed.rbegin(), trimmed.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), trimmed.end());
+	std::transform(trimmed.begin(), trimmed.end(), trimmed.begin(), ::toupper);
+
+	unsigned int len = trimmed.size();
+
+	for (std::vector<CTGReg*>::iterator it = m_currTGList.begin(); it != m_currTGList.end(); ++it) {
+		std::string tgreg = (*it)->m_name;
+		tgreg.erase(std::find_if(tgreg.rbegin(), tgreg.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), tgreg.end());
+		std::transform(tgreg.begin(), tgreg.end(), tgreg.begin(), ::toupper);
+
+		if (trimmed == tgreg.substr(0U, len))
+			m_TGSearch.push_back(*it);
+	}
+
+	std::sort(m_TGSearch.begin(), m_TGSearch.end(), refComparison);
+
+	return m_TGSearch;
 }
 
 void CWiresX::sendSearchNotFoundReply()
