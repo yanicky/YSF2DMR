@@ -24,6 +24,7 @@
 913;0;English;English
 914;0;Spanish;Spanish
 3100;0;USA Nationwide;USA Nationwide
+4000;1;Ref Unlink;Ref Unlink
 4300;1;Ref France;France
 4326;1;Ref Canada;Canada
 4373;1;Ref CT Catalana;CT Catalana
@@ -33,6 +34,7 @@
 4639;1;Ref WorldWide;WorldWide
 4640;1;Ref USA;USA - Area 0
 4790;1;Ref Mexico;XE (334)
+5000;1;Ref Status; Ref Status
 9990;2;Parrot;Parrot
-1234567;2;User;User
+94790;1;Ref2 Mexico;DMRGateway
 
