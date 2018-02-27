@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <functional>
 #include <cstdio>
+#include <cstdlib>
 #include <cassert>
 #include <cstring>
 #include <cstdlib>
@@ -101,8 +102,15 @@ m_search()
 
 			if (p1 != NULL && p2 != NULL && p3 != NULL && p4 != NULL ) {
 				CTGReg* tgreg = new CTGReg;
-				tgreg->m_id = std::string(p1);
-				tgreg->m_pc = std::string(p2);
+
+				std::string id_tmp = std::string(p1);
+
+				int n_zero = 7 - id_tmp.length();
+				if (n_zero < 0)
+					n_zero = 0;
+
+				tgreg->m_id = std::string(n_zero, '0') + id_tmp;
+				tgreg->m_opt = std::string(p2);
 				tgreg->m_name = std::string(p3);
 				tgreg->m_desc = std::string(p4);
 
@@ -255,26 +263,31 @@ unsigned int CWiresX::getDstID()
 	return m_dstID;
 }
 
-bool CWiresX::getPC(unsigned int id)
+unsigned int CWiresX::getOpt(unsigned int id)
 {
 	char dstid[20];
-	std::string pc;
+	std::string opt;
 
 	sprintf(dstid, "%05d", id);
 	dstid[5U] = 0;
 
 	for (std::vector<CTGReg*>::iterator it = m_currTGList.begin(); it != m_currTGList.end(); ++it) {
 		std::string tgid = (*it)->m_id;
-		if (dstid == tgid) {
-			pc = (*it)->m_pc;
-			break;
+		if (dstid == tgid.substr(2, 5)) {
+			opt = (*it)->m_opt;
+			m_fulldstID = atoi(tgid.c_str());
+			return atoi(opt.c_str());;
 		}
 	}
-	
-	if (pc == "1")
-		return true;
 
-	return false;
+	m_fulldstID = id;
+
+	return 0U;
+}
+
+unsigned int CWiresX::getFullDstID()
+{
+	return m_fulldstID;
 }
 
 void CWiresX::processDX(const unsigned char* source)
@@ -745,7 +758,7 @@ void CWiresX::sendAllReply()
 		data[offset + 0U] = '5';
 
 		for (unsigned int i = 0U; i < 5U; i++)
-			data[i + offset + 1U] = tgreg->m_id.at(i);
+			data[i + offset + 1U] = tgreg->m_id.at(i + 2U);
 
 		for (unsigned int i = 0U; i < 16U; i++)
 			data[i + offset + 6U] = tgreg->m_name.at(i);
@@ -832,7 +845,7 @@ void CWiresX::sendSearchReply()
 		std::transform(tgname.begin(), tgname.end(), tgname.begin(), ::toupper);
 
 		for (unsigned int i = 0U; i < 5U; i++)
-			data[i + offset + 1U] = tgreg->m_id.at(i);
+			data[i + offset + 1U] = tgreg->m_id.at(i + 2U);
 
 		for (unsigned int i = 0U; i < 16U; i++)
 			data[i + offset + 6U] = tgname.at(i);

@@ -1,26 +1,38 @@
-# DMR Dest ID;Private Call;Name;Description
-00009;0;Local;Local
-00091;0;World-wide;World-wide
-00092;0;Europe;Europe
-00093;0;North America;North America
-00208;0;France;France
-00214;0;Spain;Spain
-00222;0;Italia;Italia
-00232;0;Austria;Austria
-00235;0;United Kingdom;United Kingdom
-00262;0;Germany;Germany
-00310;0;TAC-310 USA;TAC-310 USA
-00334;0;Mexico;Mexico
-00722;0;Argentina;Argentina
-00724;0;Brazil;Brazil
-00730;0;Chile;Chile
-00913;0;English;English
-00914;0;Spanish;Spanish
-03100;0;USA Nationwide;USA Nationwide
-04300;1;Ref France;France
-04326;1;Ref Canada;Canada
-04400;1;Ref UK;United Kingdom
-04426;1;Ref Allstar;Allstar Link
-04639;1;Ref WorldWide;WorldWide
-04640;1;Ref USA;USA - Area 0
-04790;1;Ref Mexico;XE (334)
+# Example TGList.txt file
+# Enter only your preferred DMR ID list
+#
+# Format:
+# Dest ID;Option;Name;Description
+#
+# Option: TG:0, REF:1, PC:2
+#
+9;0;Local;Local
+91;0;World-wide;World-wide
+92;0;Europe;Europe
+93;0;North America;North America
+208;0;France;France
+214;0;Spain;Spain
+222;0;Italia;Italia
+232;0;Austria;Austria
+235;0;United Kingdom;United Kingdom
+262;0;Germany;Germany
+310;0;TAC-310 USA;TAC-310 USA
+334;0;Mexico;Mexico
+722;0;Argentina;Argentina
+724;0;Brazil;Brazil
+730;0;Chile;Chile
+913;0;English;English
+914;0;Spanish;Spanish
+3100;0;USA Nationwide;USA Nationwide
+4300;1;Ref France;France
+4326;1;Ref Canada;Canada
+4373;1;Ref CT Catalana;CT Catalana
+4374;1;Ref Spain 4;Ref Spain 4
+4400;1;Ref UK;United Kingdom
+4426;1;Ref Allstar;Allstar Link
+4639;1;Ref WorldWide;WorldWide
+4640;1;Ref USA;USA - Area 0
+4790;1;Ref Mexico;XE (334)
+9990;2;Parrot;Parrot
+1234567;2;User;User
+

@@ -51,14 +51,14 @@ class CTGReg {
 public:
 	CTGReg() :
 	m_id(),
-	m_pc(),
+	m_opt(),
 	m_name(),
 	m_desc()
 	{
 	}
 
 	std::string  m_id;
-	std::string  m_pc;
+	std::string  m_opt;
 	std::string  m_name;
 	std::string  m_desc;
 };
@@ -73,13 +73,14 @@ public:
 	WX_STATUS process(const unsigned char* data, const unsigned char* source, unsigned char fi, unsigned char dt, unsigned char fn, unsigned char ft);
 
 	unsigned int getDstID();
-	bool getPC(unsigned int id);
+	unsigned int getOpt(unsigned int id);
+	unsigned int getFullDstID();
 
 	std::vector<CTGReg*>& TGSearch(const std::string& name);
 
 	void processConnect(int reflector);
 	void processDisconnect(const unsigned char* source = NULL);
-    void setInfo(const std::string& name, unsigned int txFrequency, unsigned int rxFrequency, int reflector);
+	void setInfo(const std::string& name, unsigned int txFrequency, unsigned int rxFrequency, int reflector);
 	void sendConnectReply(unsigned int reflector);
 	void sendDisconnectReply();
 	void clock(unsigned int ms);
@@ -91,7 +92,8 @@ private:
 	std::string          m_name;
 	unsigned int         m_txFrequency;
 	unsigned int         m_rxFrequency;
-    unsigned int         m_dstID;
+	unsigned int         m_dstID;
+	unsigned int         m_fulldstID;
 	CYSFNetwork*         m_network;
 	unsigned char*       m_command;
 	CTimer               m_timer;
