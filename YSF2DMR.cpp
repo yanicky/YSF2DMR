@@ -43,6 +43,7 @@ const char* DEFAULT_INI_FILE = "YSF2DMR.ini";
 const char* DEFAULT_INI_FILE = "/etc/YSF2DMR.ini";
 #endif
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
