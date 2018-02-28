@@ -38,6 +38,7 @@ public:
   unsigned int getDstPort() const;
   std::string  getLocalAddress() const;
   unsigned int getLocalPort() const;
+  bool         getEnableWiresX() const;
   bool         getDaemon() const;
 
   // The Info section
@@ -63,7 +64,9 @@ public:
   bool         getDMRNetworkDebug() const;
   bool         getDMRNetworkJitterEnabled() const;
   unsigned int getDMRNetworkJitter() const;
-  bool         getDMRNetworkSendDisconnect() const;
+  bool         getDMRNetworkEnableUnlink() const;
+  unsigned int getDMRNetworkIDUnlink() const;
+  bool         getDMRNetworkPCUnlink() const;
   std::string  getDMRTGListFile() const;
 
   // The DMR Id section
@@ -92,6 +95,7 @@ private:
   unsigned int m_dstPort;
   std::string  m_localAddress;
   unsigned int m_localPort;
+  bool         m_enableWiresX;
   bool         m_daemon;
 
   unsigned int m_rxFrequency;
@@ -115,7 +119,9 @@ private:
   bool         m_dmrNetworkDebug;
   bool         m_dmrNetworkJitterEnabled;
   unsigned int m_dmrNetworkJitter;
-  bool         m_dmrNetworkSendDisconnect;
+  bool         m_dmrNetworkEnableUnlink;
+  unsigned int m_dmrNetworkIDUnlink;
+  bool         m_dmrNetworkPCUnlink;
   std::string  m_dmrTGListFile;
 
   std::string  m_dmrIdLookupFile;

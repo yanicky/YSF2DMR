@@ -45,6 +45,7 @@ m_dstAddress(),
 m_dstPort(0U),
 m_localAddress(),
 m_localPort(0U),
+m_enableWiresX(false),
 m_daemon(false),
 m_rxFrequency(0U),
 m_txFrequency(0U),
@@ -66,7 +67,9 @@ m_dmrNetworkOptions(),
 m_dmrNetworkDebug(false),
 m_dmrNetworkJitterEnabled(true),
 m_dmrNetworkJitter(500U),
-m_dmrNetworkSendDisconnect(true),
+m_dmrNetworkEnableUnlink(true),
+m_dmrNetworkIDUnlink(4000U),
+m_dmrNetworkPCUnlink(false),
 m_dmrIdLookupFile(),
 m_dmrIdLookupTime(0U),
 m_logDisplayLevel(0U),
@@ -140,6 +143,8 @@ bool CConf::read()
 			m_localAddress = value;
 		else if (::strcmp(key, "LocalPort") == 0)
 			m_localPort = (unsigned int)::atoi(value);
+		else if (::strcmp(key, "EnableWiresX") == 0)
+			m_enableWiresX = ::atoi(value) == 1;
 		else if (::strcmp(key, "Daemon") == 0)
 			m_daemon = ::atoi(value) == 1;
 	} else if (section == SECTION_INFO) {
@@ -184,8 +189,12 @@ bool CConf::read()
 			m_dmrNetworkJitterEnabled = ::atoi(value) == 1;
 		else if (::strcmp(key, "Jitter") == 0)
 			m_dmrNetworkJitter = (unsigned int)::atoi(value);
-		else if (::strcmp(key, "SendDisconnect") == 0)
-			m_dmrNetworkSendDisconnect = ::atoi(value) == 1;
+		else if (::strcmp(key, "EnableUnlink") == 0)
+			m_dmrNetworkEnableUnlink = ::atoi(value) == 1;
+		else if (::strcmp(key, "TGUnlink") == 0)
+			m_dmrNetworkIDUnlink = (unsigned int)::atoi(value);
+		else if (::strcmp(key, "PCUnlink") == 0)
+			m_dmrNetworkPCUnlink = ::atoi(value) == 1;
 		else if (::strcmp(key, "TGListFile") == 0)
 			m_dmrTGListFile = value;
 	} else if (section == SECTION_DMRID_LOOKUP) {
@@ -248,6 +257,11 @@ std::string CConf::getLocalAddress() const
 unsigned int CConf::getLocalPort() const
 {
 	return m_localPort;
+}
+
+bool CConf::getEnableWiresX() const
+{
+	return m_enableWiresX;
 }
 
 bool CConf::getDaemon() const
@@ -390,9 +404,19 @@ unsigned int CConf::getDMRNetworkJitter() const
 	return m_dmrNetworkJitter;
 }
 
-bool CConf::getDMRNetworkSendDisconnect() const
+bool CConf::getDMRNetworkEnableUnlink() const
 {
-	return m_dmrNetworkSendDisconnect;
+	return m_dmrNetworkEnableUnlink;
+}
+
+unsigned int CConf::getDMRNetworkIDUnlink() const
+{
+	return m_dmrNetworkIDUnlink;
+}
+
+bool CConf::getDMRNetworkPCUnlink() const
+{
+	return m_dmrNetworkPCUnlink;
 }
 
 std::string CConf::getDMRTGListFile() const

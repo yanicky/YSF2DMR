@@ -95,6 +95,9 @@ private:
 	std::string      m_TGList;
 	FLCO             m_dmrflco;
 	bool             m_dmrinfo;
+	unsigned int     m_idUnlink;
+	FLCO             m_flcoUnlink;
+	bool             m_enableWiresX;
 
 	bool createDMRNetwork();
 	void createGPS();

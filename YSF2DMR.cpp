@@ -97,6 +97,7 @@ int main(int argc, char** argv)
 CYSF2DMR::CYSF2DMR(const std::string& configFile) :
 m_callsign(),
 m_conf(configFile),
+m_wiresX(NULL),
 m_dmrNetwork(NULL),
 m_dmrLastDT(0U),
 m_gps(NULL),
@@ -104,7 +105,10 @@ m_dtmf(NULL),
 m_APRS(NULL),
 m_dmrFrames(0U),
 m_ysfFrames(0U),
-m_dmrinfo(false)
+m_dmrinfo(false),
+m_idUnlink(4000U),
+m_flcoUnlink(FLCO_GROUP),
+m_enableWiresX(false)
 {
 	::memset(m_ysfFrame, 0U, 200U);
 	::memset(m_dmrFrame, 0U, 50U);
@@ -228,16 +232,19 @@ int CYSF2DMR::run()
 	CTimer pollTimer(1000U, 5U);
 
 	// CWiresX Control Object
-	m_wiresX = new CWiresX(m_callsign, "L", m_ysfNetwork, m_TGList);
+	if (m_enableWiresX) {
+		m_wiresX = new CWiresX(m_callsign, "L", m_ysfNetwork, m_TGList);
+		m_dtmf = new CDTMF;
+	}
 
 	std::string name = m_conf.getDescription();
 	unsigned int rxFrequency = m_conf.getRxFrequency();
 	unsigned int txFrequency = m_conf.getTxFrequency();
 	int reflector = m_conf.getDMRDstId();
 
-	m_wiresX->setInfo(name, txFrequency, rxFrequency, reflector);
+	if (m_wiresX != NULL)
+		m_wiresX->setInfo(name, txFrequency, rxFrequency, reflector);
 
-	m_dtmf = new CDTMF;
 	m_APRS = new CAPRSReader(m_conf.getAPRSAPIKey(), m_conf.getAPRSRefresh());
 
 	CStopWatch TGChange;
@@ -256,7 +263,7 @@ int CYSF2DMR::run()
 
 	LogMessage("Starting YSF2DMR-%s", VERSION);
 
-	bool sendDisconnect = m_conf.getDMRNetworkSendDisconnect();
+	bool enableUnlink = m_conf.getDMRNetworkEnableUnlink();
 	bool unlinkReceived = false;
 
 	TG_STATUS TG_connect_state = NONE;
@@ -270,39 +277,41 @@ int CYSF2DMR::run()
 		CDMRData tx_dmrdata;
 		unsigned int ms = stopWatch.elapsed();
 
-		switch (TG_connect_state) {
-			case WAITING_UNLINK:
-				if (unlinkReceived) {
-					//LogMessage("Unlink Received");
-					TGChange.start();
-					TG_connect_state = SEND_REPLY;
-					unlinkReceived = false;
-				}
-				break;
-			case SEND_REPLY:
-				if (TGChange.elapsed() > 600) {
-					TGChange.start();
-					TG_connect_state = SEND_PTT;
-					m_wiresX->sendConnectReply(m_dstid);
-				}
-				break;
-			case SEND_PTT:
-				if (TGChange.elapsed() > 600) {
-					TGChange.start();
-					TG_connect_state = NONE;
-					if (m_ptt_dstid) {
-						LogMessage("Sending PTT: Src: %s Dst: %s%d", m_ysfSrc.c_str(), m_ptt_pc ? "" : "TG ", m_ptt_dstid);
-						SendDummyDMR(m_srcid, m_ptt_dstid, m_ptt_pc ? FLCO_USER_USER : FLCO_GROUP);
+		if (m_wiresX != NULL) {
+			switch (TG_connect_state) {
+				case WAITING_UNLINK:
+					if (unlinkReceived) {
+						//LogMessage("Unlink Received");
+						TGChange.start();
+						TG_connect_state = SEND_REPLY;
+						unlinkReceived = false;
 					}
-				}
-				break;
-			default: 
-				break;
-		}
+					break;
+				case SEND_REPLY:
+					if (TGChange.elapsed() > 600) {
+						TGChange.start();
+						TG_connect_state = SEND_PTT;
+						m_wiresX->sendConnectReply(m_dstid);
+					}
+					break;
+				case SEND_PTT:
+					if (TGChange.elapsed() > 600) {
+						TGChange.start();
+						TG_connect_state = NONE;
+						if (m_ptt_dstid) {
+							LogMessage("Sending PTT: Src: %s Dst: %s%d", m_ysfSrc.c_str(), m_ptt_pc ? "" : "TG ", m_ptt_dstid);
+							SendDummyDMR(m_srcid, m_ptt_dstid, m_ptt_pc ? FLCO_USER_USER : FLCO_GROUP);
+						}
+					}
+					break;
+				default: 
+					break;
+			}
 
-		if ((TG_connect_state != NONE) && (TGChange.elapsed() > 12000)) {
-			LogMessage("Timeout changing TG");
-			TG_connect_state = NONE;
+			if ((TG_connect_state != NONE) && (TGChange.elapsed() > 12000)) {
+				LogMessage("Timeout changing TG");
+				TG_connect_state = NONE;
+			}
 		}
 
 		while (m_ysfNetwork->read(buffer) > 0U) {
@@ -315,187 +324,182 @@ int CYSF2DMR::run()
 				unsigned char fn = fich.getFN();
 				unsigned char ft = fich.getFT();
 				
-				WX_STATUS status = m_wiresX->process(buffer + 35U, buffer + 14U, fi, dt, fn, ft);
+				if (m_wiresX != NULL) {
+					WX_STATUS status = m_wiresX->process(buffer + 35U, buffer + 14U, fi, dt, fn, ft);
+					m_ysfSrc = getSrcYSF(buffer);
 
-				switch (status) {
-					case WXS_CONNECT:
-						m_ysfSrc = getSrcYSF(buffer);
-						m_srcid = findYSFID(m_ysfSrc, false);
+					switch (status) {
+						case WXS_CONNECT:
+							m_srcid = findYSFID(m_ysfSrc, false);
 
-						m_ptt_dstid = m_wiresX->getDstID();
-						tglistOpt = m_wiresX->getOpt(m_ptt_dstid);
+							m_ptt_dstid = m_wiresX->getDstID();
+							tglistOpt = m_wiresX->getOpt(m_ptt_dstid);
 
-						switch (tglistOpt) {
-							case 0:
-								m_ptt_pc = false;
-								m_dstid = m_ptt_dstid;
-								m_dmrflco = FLCO_GROUP;
-								LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
-								break;
+							switch (tglistOpt) {
+								case 0:
+									m_ptt_pc = false;
+									m_dstid = m_ptt_dstid;
+									m_dmrflco = FLCO_GROUP;
+									LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
+									break;
 							
-							case 1:
-								m_ptt_pc = true;
-								m_dstid = 9U;
-								m_dmrflco = FLCO_GROUP;
-								LogMessage("Connect to REF %d has been requested by %s", m_ptt_dstid, m_ysfSrc.c_str());
-								break;
+								case 1:
+									m_ptt_pc = true;
+									m_dstid = 9U;
+									m_dmrflco = FLCO_GROUP;
+									LogMessage("Connect to REF %d has been requested by %s", m_ptt_dstid, m_ysfSrc.c_str());
+									break;
 								
-							case 2:
-								m_ptt_dstid = 0;
-								m_ptt_pc = true;
-								m_dstid = m_wiresX->getFullDstID();
-								m_dmrflco = FLCO_USER_USER;
-								LogMessage("Connect to %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
-								break;
+								case 2:
+									m_ptt_dstid = 0;
+									m_ptt_pc = true;
+									m_dstid = m_wiresX->getFullDstID();
+									m_dmrflco = FLCO_USER_USER;
+									LogMessage("Connect to %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
+									break;
 							
-							default:
-								m_ptt_pc = false;
-								m_dstid = m_ptt_dstid;
-								m_dmrflco = FLCO_GROUP;
-								LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
-								break;
-						}
-
-						if (sendDisconnect && (tglistOpt != 2) && (m_ptt_dstid != 4000) && (m_ptt_dstid != 5000)) {
-							LogMessage("Sending DMR Disconnect: Src: %s Dst: TG 4000", m_ysfSrc.c_str());
-
-							SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
-
-							unlinkReceived = false;
-							TG_connect_state = WAITING_UNLINK;
-						} else 
-							TG_connect_state = SEND_REPLY;
-
-						TGChange.start();
-						break;
-
-					case WXS_DX:
-						break;
-
-					case WXS_DISCONNECT:
-						LogMessage("Disconnect has been requested by %s", m_ysfSrc.c_str());
-
-						m_ysfSrc = getSrcYSF(buffer);
-						m_srcid = findYSFID(m_ysfSrc, false);
-						m_ptt_dstid = 9U;
-						m_ptt_pc = false;
-						m_dstid = 9U;
-						m_dmrflco = FLCO_GROUP;
-
-						SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
-
-						TG_connect_state = WAITING_UNLINK;
-
-						TGChange.start();
-						break;
-
-					case WXS_NONE:
-						if (::memcmp(buffer, "YSFD", 4U) == 0U) {
-							CYSFPayload ysfPayload;
-
-							if (dt == YSF_DT_VD_MODE2) {
-								if (fi == YSF_FI_HEADER) {
-									if (ysfPayload.processHeaderData(buffer + 35U)) {
-										std::string ysfSrc = ysfPayload.getSource();
-										std::string ysfDst = ysfPayload.getDest();
-										LogMessage("Received YSF Header: Src: %s Dst: %s", ysfSrc.c_str(), ysfDst.c_str());
-										m_srcid = findYSFID(ysfSrc, true);
-										m_conv.putYSFHeader();
-										m_ysfFrames = 0U;
-									}
-								} else if (fi == YSF_FI_TERMINATOR) {
-									LogMessage("YSF received end of voice transmission, %.1f seconds", float(m_ysfFrames) / 10.0F);
-									m_conv.putYSFEOT();
-									m_ysfFrames = 0U;
-								} else if (fi == YSF_FI_COMMUNICATIONS) {
-									m_conv.putYSF(buffer + 35U);
-									m_ysfFrames++;
-								}
+								default:
+									m_ptt_pc = false;
+									m_dstid = m_ptt_dstid;
+									m_dmrflco = FLCO_GROUP;
+									LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
+									break;
 							}
-						}
-						break;
 
-					default:
-						break;
+							if (enableUnlink && (tglistOpt != 2) && (m_ptt_dstid != m_idUnlink) && (m_ptt_dstid != 5000)) {
+								LogMessage("Sending DMR Disconnect: Src: %s Dst: %s%d", m_ysfSrc.c_str(), m_flcoUnlink == FLCO_GROUP ? "TG " : "", m_idUnlink);
+
+								SendDummyDMR(m_srcid, m_idUnlink, m_flcoUnlink);
+
+								unlinkReceived = false;
+								TG_connect_state = WAITING_UNLINK;
+							} else 
+								TG_connect_state = SEND_REPLY;
+
+							TGChange.start();
+							break;
+
+						case WXS_DX:
+							break;
+
+						case WXS_DISCONNECT:
+							LogMessage("Disconnect has been requested by %s", m_ysfSrc.c_str());
+
+							m_srcid = findYSFID(m_ysfSrc, false);
+							m_ptt_dstid = 9U;
+							m_ptt_pc = false;
+							m_dstid = 9U;
+							m_dmrflco = FLCO_GROUP;
+
+							SendDummyDMR(m_srcid, m_idUnlink, m_flcoUnlink);
+
+							TG_connect_state = WAITING_UNLINK;
+
+							TGChange.start();
+							break;
+
+						default:
+							break;
+					}
+
+					status = WXS_NONE;
+
+					if (dt == YSF_DT_VD_MODE2)
+						status = m_dtmf->decodeVDMode2(buffer + 35U, (buffer[34U] & 0x01U) == 0x01U);
+
+					switch (status) {
+						case WXS_CONNECT:
+							m_srcid = findYSFID(m_ysfSrc, false);
+
+							m_ptt_dstid = m_dtmf->getDstID();
+							tglistOpt = m_wiresX->getOpt(m_ptt_dstid);
+
+							switch (tglistOpt) {
+								case 0:
+									m_ptt_pc = false;
+									m_dstid = m_ptt_dstid;
+									m_dmrflco = FLCO_GROUP;
+									LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
+									break;
+							
+								case 1:
+									m_ptt_pc = true;
+									m_dstid = 9U;
+									m_dmrflco = FLCO_GROUP;
+									LogMessage("Connect to REF %d has been requested by %s", m_ptt_dstid, m_ysfSrc.c_str());
+									break;
+								
+								case 2:
+									m_ptt_dstid = 0;
+									m_ptt_pc = true;
+									m_dstid = m_wiresX->getFullDstID();
+									m_dmrflco = FLCO_USER_USER;
+									LogMessage("Connect to %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
+									break;
+							
+								default:
+									m_ptt_pc = false;
+									m_dstid = m_ptt_dstid;
+									m_dmrflco = FLCO_GROUP;
+									LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
+									break;
+							}
+
+							LogMessage("Connect to %s%d via DTMF has been requested by %s", m_ptt_pc ? "" : "TG ", m_ptt_dstid, m_ysfSrc.c_str());
+
+							if (enableUnlink && (tglistOpt != 2) && (m_ptt_dstid != m_idUnlink) && (m_ptt_dstid != 5000)) {
+								LogMessage("Sending DMR Disconnect: Src: %s Dst: %s%d", m_ysfSrc.c_str(), m_flcoUnlink == FLCO_GROUP ? "TG " : "", m_idUnlink);
+
+								SendDummyDMR(m_srcid, m_idUnlink, m_flcoUnlink);
+							
+								unlinkReceived = false;
+								TG_connect_state = WAITING_UNLINK;
+							} else
+								TG_connect_state = SEND_REPLY;
+
+							TGChange.start();
+							break;
+
+						case WXS_DISCONNECT:
+							LogMessage("Disconnect via DTMF has been requested by %s", m_ysfSrc.c_str());
+
+							m_srcid = findYSFID(m_ysfSrc, false);
+							m_ptt_dstid = 9U;
+							m_ptt_pc = false;
+							m_dstid = 9U;
+							m_dmrflco = FLCO_GROUP;
+
+							SendDummyDMR(m_srcid, m_idUnlink, m_flcoUnlink);
+
+							TG_connect_state = WAITING_UNLINK;
+							TGChange.start();
+							break;
+
+						default:
+							break;
+					}
 				}
 
-				status = WXS_NONE;
+				if ((::memcmp(buffer, "YSFD", 4U) == 0U) && (dt == YSF_DT_VD_MODE2)) {
+					CYSFPayload ysfPayload;
 
-				if (dt == YSF_DT_VD_MODE2)
-					status = m_dtmf->decodeVDMode2(buffer + 35U, (buffer[34U] & 0x01U) == 0x01U);
-
-				switch (status) {
-					case WXS_CONNECT:
-						m_ysfSrc = getSrcYSF(buffer);
-						m_srcid = findYSFID(m_ysfSrc, false);
-
-						m_ptt_dstid = m_dtmf->getDstID();
-						tglistOpt = m_wiresX->getOpt(m_ptt_dstid);
-
-						switch (tglistOpt) {
-							case 0:
-								m_ptt_pc = false;
-								m_dstid = m_ptt_dstid;
-								m_dmrflco = FLCO_GROUP;
-								LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
-								break;
-							
-							case 1:
-								m_ptt_pc = true;
-								m_dstid = 9U;
-								m_dmrflco = FLCO_GROUP;
-								LogMessage("Connect to REF %d has been requested by %s", m_ptt_dstid, m_ysfSrc.c_str());
-								break;
-								
-							case 2:
-								m_ptt_dstid = 0;
-								m_ptt_pc = true;
-								m_dstid = m_wiresX->getFullDstID();
-								m_dmrflco = FLCO_USER_USER;
-								LogMessage("Connect to %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
-								break;
-							
-							default:
-								m_ptt_pc = false;
-								m_dstid = m_ptt_dstid;
-								m_dmrflco = FLCO_GROUP;
-								LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
-								break;
+					if (fi == YSF_FI_HEADER) {
+						if (ysfPayload.processHeaderData(buffer + 35U)) {
+							std::string ysfSrc = ysfPayload.getSource();
+							std::string ysfDst = ysfPayload.getDest();
+							LogMessage("Received YSF Header: Src: %s Dst: %s", ysfSrc.c_str(), ysfDst.c_str());
+							m_srcid = findYSFID(ysfSrc, true);
+							m_conv.putYSFHeader();
+							m_ysfFrames = 0U;
 						}
-
-						LogMessage("Connect to %s%d via DTMF has been requested by %s", m_ptt_pc ? "" : "TG ", m_ptt_dstid, m_ysfSrc.c_str());
-
-						if (sendDisconnect && (tglistOpt != 2) && (m_ptt_dstid != 4000) && (m_ptt_dstid != 5000)) {
-							LogMessage("Sending DMR Disconnect: Src: %s Dst: TG 4000", m_ysfSrc.c_str());
-
-							SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
-							
-							unlinkReceived = false;
-							TG_connect_state = WAITING_UNLINK;
-						} else
-							TG_connect_state = SEND_REPLY;
-
-						TGChange.start();
-						break;
-
-					case WXS_DISCONNECT:
-						LogMessage("Disconnect via DTMF has been requested by %s", m_ysfSrc.c_str());
-
-						m_ysfSrc = getSrcYSF(buffer);
-						m_srcid = findYSFID(m_ysfSrc, false);
-						m_ptt_dstid = 9U;
-						m_ptt_pc = false;
-						m_dstid = 9U;
-						m_dmrflco = FLCO_GROUP;
-
-						SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
-
-						TG_connect_state = WAITING_UNLINK;
-						TGChange.start();
-						break;
-
-					default:
-						break;
+					} else if (fi == YSF_FI_TERMINATOR) {
+						LogMessage("YSF received end of voice transmission, %.1f seconds", float(m_ysfFrames) / 10.0F);
+						m_conv.putYSFEOT();
+						m_ysfFrames = 0U;
+					} else if (fi == YSF_FI_COMMUNICATIONS) {
+						m_conv.putYSF(buffer + 35U);
+						m_ysfFrames++;
+					}
 				}
 
 				if (m_gps != NULL)
@@ -927,7 +931,9 @@ int CYSF2DMR::run()
 
 		m_ysfNetwork->clock(ms);
 		m_dmrNetwork->clock(ms);
-		m_wiresX->clock(ms);
+
+		if (m_wiresX != NULL)
+			m_wiresX->clock(ms);
 
 		if (m_gps != NULL)
 			m_gps->clock(ms);
@@ -953,8 +959,11 @@ int CYSF2DMR::run()
 	
 	delete m_dmrNetwork;
 	delete m_ysfNetwork;
-	delete m_wiresX;
-	delete m_dtmf;
+
+	if (m_wiresX != NULL) {
+		delete m_wiresX;
+		delete m_dtmf;
+	}
 
 	::LogFinalise();
 
@@ -1132,6 +1141,14 @@ bool CYSF2DMR::createDMRNetwork()
 	m_dstid = m_conf.getDMRDstId();
 	m_dmrpc = m_conf.getDMRPC();
 	m_TGList = m_conf.getDMRTGListFile();
+	m_idUnlink = m_conf.getDMRNetworkIDUnlink();
+	bool pcUnlink = m_conf.getDMRNetworkPCUnlink();
+	m_enableWiresX = m_conf.getEnableWiresX();
+
+	if (pcUnlink)
+		m_flcoUnlink = FLCO_USER_USER;
+	else
+		m_flcoUnlink = FLCO_GROUP;
 
 	if (m_srcHS > 99999999U)
 		m_defsrcid = m_srcHS / 100U;
@@ -1141,7 +1158,7 @@ bool CYSF2DMR::createDMRNetwork()
 		m_defsrcid = m_srcHS;
 
 	m_srcid = m_defsrcid;
-	bool sendDisconnect = m_conf.getDMRNetworkSendDisconnect();
+	bool enableUnlink = m_conf.getDMRNetworkEnableUnlink();
 	
 	LogMessage("DMR Network Parameters");
 	LogMessage("    ID: %u", m_srcHS);
@@ -1149,7 +1166,7 @@ bool CYSF2DMR::createDMRNetwork()
 	LogMessage("    Startup DstID: %s%u", m_dmrpc ? "" : "TG ", m_dstid);
 	LogMessage("    Address: %s", address.c_str());
 	LogMessage("    Port: %u", port);
-	LogMessage("    Send 4000 Disconect: %s", (sendDisconnect) ? "YES":"NO");
+	LogMessage("    Send %s%u Disconect: %s", pcUnlink ? "" : "TG ", m_idUnlink, (enableUnlink) ? "Yes":"No");
 	LogMessage("    TGList file: %s", m_TGList.c_str());
 	if (local > 0U)
 		LogMessage("    Local: %u", local);
