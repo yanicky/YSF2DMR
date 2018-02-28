@@ -103,7 +103,8 @@ m_gps(NULL),
 m_dtmf(NULL),
 m_APRS(NULL),
 m_dmrFrames(0U),
-m_ysfFrames(0U)
+m_ysfFrames(0U),
+m_LCdecoded(false)
 {
 	::memset(m_ysfFrame, 0U, 200U);
 	::memset(m_dmrFrame, 0U, 50U);
@@ -356,9 +357,9 @@ int CYSF2DMR::run()
 						}
 
 						if (sendDisconnect && (tglistOpt != 2) && (m_ptt_dstid != 4000) && (m_ptt_dstid != 5000)) {
-							LogMessage("Sending DMR Disconnect: Src: %s Dst: REF 4000", m_ysfSrc.c_str());
+							LogMessage("Sending DMR Disconnect: Src: %s Dst: TG 4000", m_ysfSrc.c_str());
 
-							SendDummyDMR(m_srcid, 4000U, FLCO_USER_USER);
+							SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 
 							unlinkReceived = false;
 							TG_connect_state = WAITING_UNLINK;
@@ -381,7 +382,7 @@ int CYSF2DMR::run()
 						m_dstid = 9U;
 						m_dmrflco = FLCO_GROUP;
 
-						SendDummyDMR(m_srcid, 4000U, FLCO_USER_USER);
+						SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 
 						TG_connect_state = WAITING_UNLINK;
 
@@ -465,9 +466,9 @@ int CYSF2DMR::run()
 						LogMessage("Connect to %s%d via DTMF has been requested by %s", m_ptt_pc ? "" : "TG ", m_ptt_dstid, m_ysfSrc.c_str());
 
 						if (sendDisconnect && (tglistOpt != 2) && (m_ptt_dstid != 4000) && (m_ptt_dstid != 5000)) {
-							LogMessage("Sending DMR Disconnect: Src: %s Dst: REF 4000", m_ysfSrc.c_str());
+							LogMessage("Sending DMR Disconnect: Src: %s Dst: TG 4000", m_ysfSrc.c_str());
 
-							SendDummyDMR(m_srcid, 4000U, FLCO_USER_USER);
+							SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 							
 							unlinkReceived = false;
 							TG_connect_state = WAITING_UNLINK;
@@ -487,7 +488,7 @@ int CYSF2DMR::run()
 						m_dstid = 9U;
 						m_dmrflco = FLCO_GROUP;
 
-						SendDummyDMR(m_srcid, 4000U, FLCO_USER_USER);
+						SendDummyDMR(m_srcid, 4000U, FLCO_GROUP);
 
 						TG_connect_state = WAITING_UNLINK;
 						TGChange.start();
@@ -687,6 +688,7 @@ int CYSF2DMR::run()
 					m_dmrNetwork->reset(2U);
 					networkWatchdog.stop();
 					m_dmrFrames = 0U;
+					m_LCdecoded = false;
 				}
 
 				if((DataType == DT_VOICE_LC_HEADER) && (DataType != m_dmrLastDT)) {
@@ -709,6 +711,8 @@ int CYSF2DMR::run()
 					m_conv.putDMRHeader();
 					LogMessage("DMR Header received from %s to %s", m_netSrc.c_str(), m_netDst.c_str());
 
+					m_LCdecoded = true;
+
 					if (m_lookup->exists(SrcId)) {
 						int lat, lon, resp;
 						resp = m_APRS->findCall(m_netSrc,&lat,&lon);
@@ -719,7 +723,8 @@ int CYSF2DMR::run()
 							LogMessage("GPS Position of %s Lat: %d, Lon: %d", m_netSrc.c_str(), lat, lon);
 							m_APRS->formatGPS(gps_buffer, lat, lon);
 						}
-							else LogMessage("GPS Position not available");
+						else
+							LogMessage("GPS Position not available");
 					}
 
 					m_netSrc.resize(YSF_CALLSIGN_LENGTH, ' ');
@@ -730,7 +735,26 @@ int CYSF2DMR::run()
 
 				if(DataType == DT_VOICE_SYNC || DataType == DT_VOICE) {
 					unsigned char dmr_frame[50];
+
 					tx_dmrdata.getData(dmr_frame);
+
+					if (!m_LCdecoded) {
+						CDMREMB emb;
+						emb.putData(dmr_frame);
+						unsigned char lcss = emb.getLCSS();
+						m_decEmbeddedLC.addData(dmr_frame, lcss);
+
+						CDMRLC* lc = m_decEmbeddedLC.getLC();
+	
+						if (lc != NULL) {
+							unsigned int srcId = lc->getSrcId();
+							unsigned int dstId = lc->getDstId();
+							FLCO flco = lc->getFLCO();
+							LogMessage("DMR audio received from %d to %s%d", srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+							m_LCdecoded = true;
+						}
+					}
+
 					m_conv.putDMR(dmr_frame); // Add DMR frame for YSF conversion
 					m_dmrFrames++;
 				}
@@ -749,6 +773,7 @@ int CYSF2DMR::run()
 					m_dmrNetwork->reset(2U);
 					networkWatchdog.stop();
 					m_dmrFrames = 0U;
+					m_LCdecoded = false;
 				}
 			}
 			

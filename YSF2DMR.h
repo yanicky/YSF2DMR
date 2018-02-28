@@ -94,6 +94,8 @@ private:
 	CDMREmbeddedData m_EmbeddedLC;
 	std::string      m_TGList;
 	FLCO             m_dmrflco;
+	bool             m_LCdecoded;
+	CDMREmbeddedData m_decEmbeddedLC;
 
 	bool createDMRNetwork();
 	void createGPS();
