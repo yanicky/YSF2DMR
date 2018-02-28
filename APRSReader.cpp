@@ -186,7 +186,7 @@ bool CAPRSReader::load_call()
 	std::string website_HTML;
 
 	// get information
-	LogMessage("Searching %s", m_cs.c_str());
+	// LogMessage("Searching %s", m_cs.c_str());
 	// website url
 	std::string url = "/api/get?name=" + m_cs + "&what=loc&apikey=" + m_ApiKey + "&format=json";
 	//HTTP GET
@@ -234,11 +234,11 @@ bool CAPRSReader::load_call()
 	if (latitude == 0 || longitude == 0) {
 		m_lat_table[m_cs] = 0;
 		m_lon_table[m_cs] = 0;
-		LogMessage("Call %s not found", m_cs.c_str());
+		LogMessage("GPS Position of %s not found", m_cs.c_str());
 		return false;
 	}
 	else {
-		LogMessage("Call %s found Lat: %d, Lon: %d", m_cs.c_str(), latitude, longitude);
+		LogMessage("GPS Position of %s Lat: %0.3f, Lon: %0.3f", m_cs.c_str(), (float)latitude / 1000.0, (float)longitude / 1000.0);
 		return true;
 	}
 }

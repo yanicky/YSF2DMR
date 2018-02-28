@@ -104,7 +104,7 @@ m_dtmf(NULL),
 m_APRS(NULL),
 m_dmrFrames(0U),
 m_ysfFrames(0U),
-m_LCdecoded(false)
+m_dmrinfo(false)
 {
 	::memset(m_ysfFrame, 0U, 200U);
 	::memset(m_dmrFrame, 0U, 50U);
@@ -228,7 +228,7 @@ int CYSF2DMR::run()
 	CTimer pollTimer(1000U, 5U);
 
 	// CWiresX Control Object
-	m_wiresX = new CWiresX(m_callsign, "R", m_ysfNetwork, m_TGList);
+	m_wiresX = new CWiresX(m_callsign, "L", m_ysfNetwork, m_TGList);
 
 	std::string name = m_conf.getDescription();
 	unsigned int rxFrequency = m_conf.getRxFrequency();
@@ -688,7 +688,7 @@ int CYSF2DMR::run()
 					m_dmrNetwork->reset(2U);
 					networkWatchdog.stop();
 					m_dmrFrames = 0U;
-					m_LCdecoded = false;
+					m_dmrinfo = false;
 				}
 
 				if((DataType == DT_VOICE_LC_HEADER) && (DataType != m_dmrLastDT)) {
@@ -709,9 +709,9 @@ int CYSF2DMR::run()
 					m_netDst = (netflco == FLCO_GROUP ? "TG " : "") + m_lookup->findCS(DstId);
 
 					m_conv.putDMRHeader();
-					LogMessage("DMR Header received from %s to %s", m_netSrc.c_str(), m_netDst.c_str());
+					LogMessage("DMR audio received from %s to %s", m_netSrc.c_str(), m_netDst.c_str());
 
-					m_LCdecoded = true;
+					m_dmrinfo = true;
 
 					if (m_lookup->exists(SrcId)) {
 						int lat, lon, resp;
@@ -720,11 +720,11 @@ int CYSF2DMR::run()
 						//LogMessage("Searching GPS Position of %s in aprs.fi", m_netSrc.c_str());
 
 						if (resp) {
-							LogMessage("GPS Position of %s Lat: %d, Lon: %d", m_netSrc.c_str(), lat, lon);
+							LogMessage("GPS Position of %s Lat: %0.3f, Lon: %0.3f", m_netSrc.c_str(), (float)lat / 1000.0, (float)lon / 1000.0);
 							m_APRS->formatGPS(gps_buffer, lat, lon);
 						}
-						else
-							LogMessage("GPS Position not available");
+						// else
+						//	LogMessage("GPS Position not available");
 					}
 
 					m_netSrc.resize(YSF_CALLSIGN_LENGTH, ' ');
@@ -738,21 +738,35 @@ int CYSF2DMR::run()
 
 					tx_dmrdata.getData(dmr_frame);
 
-					if (!m_LCdecoded) {
-						CDMREMB emb;
-						emb.putData(dmr_frame);
-						unsigned char lcss = emb.getLCSS();
-						m_decEmbeddedLC.addData(dmr_frame, lcss);
+					if (!m_dmrinfo) {
+						if (SrcId == 9990U)
+							m_netSrc = "PARROT";
+						else if (SrcId == 9U)
+							m_netSrc = "LOCAL";
+						else if (SrcId == 4000U)
+							m_netSrc = "UNLINK";
+						else
+							m_netSrc = m_lookup->findCS(SrcId);
 
-						CDMRLC* lc = m_decEmbeddedLC.getLC();
-	
-						if (lc != NULL) {
-							unsigned int srcId = lc->getSrcId();
-							unsigned int dstId = lc->getDstId();
-							FLCO flco = lc->getFLCO();
-							LogMessage("DMR audio received from %d to %s%d", srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
-							m_LCdecoded = true;
+						m_netDst = (netflco == FLCO_GROUP ? "TG " : "") + m_lookup->findCS(DstId);
+
+						LogMessage("DMR audio received from %s to %s", m_netSrc.c_str(), m_netDst.c_str());
+						
+						if (m_lookup->exists(SrcId)) {
+							int lat, lon, resp;
+							resp = m_APRS->findCall(m_netSrc,&lat,&lon);
+
+							//LogMessage("Searching GPS Position of %s in aprs.fi", m_netSrc.c_str());
+
+							if (resp) {
+								LogMessage("GPS Position of %s Lat: %0.3f, Lon: %0.3f", m_netSrc.c_str(), (float)lat / 1000.0, (float)lon / 1000.0);
+								m_APRS->formatGPS(gps_buffer, lat, lon);
+							}
+							// else
+							//	LogMessage("GPS Position not available");
 						}
+
+						m_dmrinfo = true;
 					}
 
 					m_conv.putDMR(dmr_frame); // Add DMR frame for YSF conversion
@@ -773,7 +787,7 @@ int CYSF2DMR::run()
 					m_dmrNetwork->reset(2U);
 					networkWatchdog.stop();
 					m_dmrFrames = 0U;
-					m_LCdecoded = false;
+					m_dmrinfo = false;
 				}
 			}
 			
