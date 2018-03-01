@@ -245,8 +245,11 @@ int CYSF2DMR::run()
 	if (m_wiresX != NULL)
 		m_wiresX->setInfo(name, txFrequency, rxFrequency, reflector);
 
-	m_APRS = new CAPRSReader(m_conf.getAPRSAPIKey(), m_conf.getAPRSRefresh());
-
+	if (m_conf.getAPRSEnabled()) {
+		createGPS();
+		m_APRS = new CAPRSReader(m_conf.getAPRSAPIKey(), m_conf.getAPRSRefresh());
+	}
+	
 	CStopWatch TGChange;
 	CStopWatch stopWatch;
 	CStopWatch ysfWatch;
@@ -258,8 +261,6 @@ int CYSF2DMR::run()
 
 	unsigned char ysf_cnt = 0;
 	unsigned char dmr_cnt = 0;
-
-	createGPS();
 
 	LogMessage("Starting YSF2DMR-%s", VERSION);
 
@@ -717,9 +718,9 @@ int CYSF2DMR::run()
 
 					m_dmrinfo = true;
 
-					if (m_lookup->exists(SrcId)) {
+					if (m_lookup->exists(SrcId) && (m_APRS != NULL)) {
 						int lat, lon, resp;
-						resp = m_APRS->findCall(m_netSrc,&lat,&lon);
+						resp = m_APRS->findCall(m_netSrc, &lat, &lon);
 
 						//LogMessage("Searching GPS Position of %s in aprs.fi", m_netSrc.c_str());
 
@@ -756,9 +757,9 @@ int CYSF2DMR::run()
 
 						LogMessage("DMR audio received from %s to %s", m_netSrc.c_str(), m_netDst.c_str());
 						
-						if (m_lookup->exists(SrcId)) {
+						if (m_lookup->exists(SrcId) && (m_APRS != NULL)) {
 							int lat, lon, resp;
-							resp = m_APRS->findCall(m_netSrc,&lat,&lon);
+							resp = m_APRS->findCall(m_netSrc, &lat, &lon);
 
 							//LogMessage("Searching GPS Position of %s in aprs.fi", m_netSrc.c_str());
 
@@ -950,7 +951,11 @@ int CYSF2DMR::run()
 
 	m_ysfNetwork->close();
 	m_dmrNetwork->close();
-	m_APRS->stop();
+	
+	if (m_APRS != NULL) {
+		m_APRS->stop();
+		delete m_APRS;
+	}
 	
 	if (m_gps != NULL) {
 		m_gps->close();
@@ -972,9 +977,6 @@ int CYSF2DMR::run()
 
 void CYSF2DMR::createGPS()
 {
-	if (!m_conf.getAPRSEnabled())
-		return;
-
 	std::string hostname = m_conf.getAPRSServer();
 	unsigned int port    = m_conf.getAPRSPort();
 	std::string password = m_conf.getAPRSPassword();

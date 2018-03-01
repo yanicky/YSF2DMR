@@ -36,5 +36,6 @@
 4790;1;Ref Mexico;XE (334)
 5000;1;Ref Status; Ref Status
 9990;2;Parrot;Parrot
+21461;0;YSF-EA5SPAIN;YSF-EA5SPAIN
 94790;1;Ref2 Mexico;DMRGateway
 
