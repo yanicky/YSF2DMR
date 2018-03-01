@@ -203,7 +203,7 @@ bool CAPRSWriterThread::connect()
 	if (!ret)
 		return false;
 
-	//wait for lgin banner
+	//wait for login banner
 	int length;
 	std::string serverResponse;
 	length = m_socket.readLine(serverResponse, APRS_TIMEOUT);
@@ -221,7 +221,7 @@ bool CAPRSWriterThread::connect()
 
 	char connectString[200U];
 	::sprintf(connectString, "user %s pass %s vers %s%s\n", m_username.c_str(), m_password.c_str(), (m_clientName.length() ? m_clientName : "YSF2DMR").c_str(), filter.c_str());
-	LogMessage("Connect String : %s", connectString);
+	
 	ret = m_socket.writeLine(std::string(connectString));
 	if (!ret) {
 		m_socket.close();
