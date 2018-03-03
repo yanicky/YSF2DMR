@@ -128,7 +128,14 @@ int CYSF2DMR::run()
 
 	setlocale(LC_ALL, "C");
 
-	ret = ::LogInitialise(m_conf.getLogFilePath(), m_conf.getLogFileRoot(), m_conf.getLogFileLevel(), m_conf.getLogDisplayLevel());
+	unsigned int logDisplayLevel = m_conf.getLogDisplayLevel();
+
+#if !defined(_WIN32) && !defined(_WIN64)
+	if(m_conf.getDaemon())
+		logDisplayLevel = 0U;
+#endif
+
+	ret = ::LogInitialise(m_conf.getLogFilePath(), m_conf.getLogFileRoot(), m_conf.getLogFileLevel(), logDisplayLevel);
 	if (!ret) {
 		::fprintf(stderr, "YSF2DMR: unable to open the log file\n");
 		return 1;
