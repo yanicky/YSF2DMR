@@ -30,9 +30,9 @@
 #include <pwd.h>
 #endif
 
-// "NO GPS" info for DT1 and DT2, suggested by Marius YO2LOJ
-const unsigned char dt1_temp[] = {0x34, 0x22, 0x61, 0x5F, 0x28, 0x20, 0x20, 0x20, 0x20, 0x20};
-const unsigned char dt2_temp[] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x03, 0xE1};
+// DT1 and DT2, suggested by Manuel EA7EE
+const unsigned char dt1_temp[] = {0x31, 0x22, 0x62, 0x5F, 0x29, 0x00, 0x00, 0x00, 0x00, 0x00};
+const unsigned char dt2_temp[] = {0x00, 0x00, 0x00, 0x00, 0x6C, 0x20, 0x1C, 0x20, 0x03, 0x08};
 
 #define DMR_FRAME_PER       55U
 #define YSF_FRAME_PER       90U
@@ -348,7 +348,8 @@ int CYSF2DMR::run()
 							switch (tglistOpt) {
 								case 0:
 									m_ptt_pc = false;
-									m_dstid = m_ptt_dstid;
+									m_dstid = m_wiresX->getFullDstID();
+									m_ptt_dstid = m_dstid;
 									m_dmrflco = FLCO_GROUP;
 									LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
 									break;
@@ -370,7 +371,8 @@ int CYSF2DMR::run()
 							
 								default:
 									m_ptt_pc = false;
-									m_dstid = m_ptt_dstid;
+									m_dstid = m_wiresX->getFullDstID();
+									m_ptt_dstid = m_dstid;
 									m_dmrflco = FLCO_GROUP;
 									LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
 									break;
@@ -427,7 +429,8 @@ int CYSF2DMR::run()
 							switch (tglistOpt) {
 								case 0:
 									m_ptt_pc = false;
-									m_dstid = m_ptt_dstid;
+									m_dstid = m_wiresX->getFullDstID();
+									m_ptt_dstid = m_dstid;
 									m_dmrflco = FLCO_GROUP;
 									LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
 									break;
@@ -449,7 +452,8 @@ int CYSF2DMR::run()
 							
 								default:
 									m_ptt_pc = false;
-									m_dstid = m_ptt_dstid;
+									m_dstid = m_wiresX->getFullDstID();
+									m_ptt_dstid = m_dstid;
 									m_dmrflco = FLCO_GROUP;
 									LogMessage("Connect to TG %d has been requested by %s", m_dstid, m_ysfSrc.c_str());
 									break;
