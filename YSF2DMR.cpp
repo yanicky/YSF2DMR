@@ -784,6 +784,9 @@ int CYSF2DMR::run()
 							//	LogMessage("GPS Position not available");
 						}
 
+						m_netSrc.resize(YSF_CALLSIGN_LENGTH, ' ');
+						m_netDst.resize(YSF_CALLSIGN_LENGTH, ' ');
+
 						m_dmrinfo = true;
 					}
 
