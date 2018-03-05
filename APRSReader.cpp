@@ -186,14 +186,14 @@ bool CAPRSReader::load_call()
 	std::string website_HTML;
 
 	// get information
-	// LogMessage("Searching %s", m_cs.c_str());
+	// LogMessage("Searching %s", callsign.c_str());
 	// website url
-	std::string url = "/api/get?name=" + m_cs + "&what=loc&apikey=" + m_ApiKey + "&format=json";
+	std::string url = "/api/get?name=" + m_cs + "-Y," + m_cs + "-7," + m_cs + "-8," + m_cs + "-9,";
+	url = url + m_cs + "-14," + m_cs + "&what=loc&apikey=" + m_ApiKey + "&format=json";
 	//HTTP GET
-	std::string get_http = "GET " + url + " HTTP/1.1\r\nHost: api.aprs.fi\r\nUser-Agent: YSF2DMR/0.12\r\n\r\n";
-
+	std::string get_http = "GET " + url + " HTTP/1.1\r\nHost: api.aprs.fi\r\nUser-Agent: YSF2DMR/0.12\r\n\r\n";		
 	CTCPSocket sockfd("api.aprs.fi", 80);
-	
+
 	bool ret = sockfd.open();
 	if (!ret){
 		LogMessage("Could not connect to api.aprs.fi");
@@ -202,10 +202,8 @@ bool CAPRSReader::load_call()
 
 	// send GET / HTTP
 	sockfd.write((const unsigned char*)get_http.c_str(), strlen(get_http.c_str()));
-	// recieve html
-	gettimeofday(&timeinfo, 0);
-	epoch = timeinfo.tv_sec;
 
+	// recieve html
 	while ((nDataLength = sockfd.read(buffer, 10000, APRS_TIMEOUT)) > 0){
 		int i = 0;
 		char tmp_str[20];
@@ -224,12 +222,19 @@ bool CAPRSReader::load_call()
 				longitude = (int)(atof(tmp_str) * 1000);
 				m_lon_table[m_cs] = longitude;
 			}
+			
+			if ((latitude != 0) && (longitude != 0))
+				break;
 		}
+		if ((latitude != 0) && (longitude != 0))
+			break;
 	}
 
-	m_time_table[m_cs] = epoch;
-
 	sockfd.close();
+
+	gettimeofday(&timeinfo, 0);
+	epoch = timeinfo.tv_sec;
+	m_time_table[m_cs] = epoch;
 
 	if (latitude == 0 || longitude == 0) {
 		m_lat_table[m_cs] = 0;
@@ -248,10 +253,7 @@ bool CAPRSReader::findCall(std::string cs, int *latitude, int *longitude)
 	bool not_found = false;
 	struct timeval timeinfo;
 	unsigned int epoch, tempo;
-	
-	if (m_new_callsign)
-		return false;
-	
+
 	try {
 		*latitude = m_lat_table.at(cs);
 	} catch (...) {
@@ -263,31 +265,35 @@ bool CAPRSReader::findCall(std::string cs, int *latitude, int *longitude)
 	} catch (...) {
 		not_found = true;
 	}
-	
+
+	if (m_new_callsign) {
+		if (not_found)
+			return false;
+		else if ((*latitude != 0) && (*longitude != 0))
+			return true;
+		else
+			return false;
+	} 
+
 	if (not_found) {
-		if (!m_new_callsign) {
-			m_new_callsign = true;
-			m_cs = cs;
-		}
+		m_new_callsign = true;
+		m_cs = cs;
 		return false;
 	}
 	else {
 		gettimeofday(&timeinfo, 0);
 		epoch = timeinfo.tv_sec;
 		tempo = m_time_table.at(cs);
-		
+
 		if (epoch > (tempo + m_refres_time)) {
 			//LogMessage("Location expired");
-			if (!m_new_callsign) {
-				m_new_callsign = true;
-				m_cs = cs;
-			}
+			m_new_callsign = true;
+			m_cs = cs;
 		}
-	}
-	
-	if (*latitude == 0 || *longitude == 0)
-		return false;
-	else
-		return true;
-}
 
+		if ((*latitude != 0) && (*longitude != 0))
+			return true;
+		else
+			return false;
+	}
+}
