@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2010,2014,2016 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2010,2014,2016 and 2018 by Jonathan Naylor G4KLX
  *   Copyright (C) 2016 Mathias Weyland, HB9FRV
  *   Copyright (C) 2018 by Andy Uribe CA6JAU
  *
@@ -446,11 +446,11 @@ const unsigned int PRNG_TABLE[] = {
 	0xECDB0FU, 0xB542DAU, 0x9E5131U, 0xC7ABA5U, 0x8C38FEU, 0x97010BU, 0xDED290U, 0xA4CC7DU, 0xAD3D2EU, 0xF6B6B3U, 
 	0xF9A540U, 0x205ED9U, 0x634EB6U, 0x5A9567U, 0x11A6D8U, 0x0B3F09U};
 
-const unsigned int DMR_A_TABLE[] = { 0U,  4U,  8U, 12U, 16U, 20U, 24U, 28U, 32U, 36U, 40U, 44U,
+const unsigned int DMR_A_TABLE[] = {0U,  4U,  8U, 12U, 16U, 20U, 24U, 28U, 32U, 36U, 40U, 44U,
 									48U, 52U, 56U, 60U, 64U, 68U,  1U,  5U,  9U, 13U, 17U, 21U};
 const unsigned int DMR_B_TABLE[] = {25U, 29U, 33U, 37U, 41U, 45U, 49U, 53U, 57U, 61U, 65U, 69U,
-									 2U,  6U, 10U, 14U, 18U, 22U, 26U, 30U, 34U, 38U, 42U, 46U};
-const unsigned int DMR_C_TABLE[] = {50U, 54U, 58U, 62U, 66U, 70U,  3U,  7U, 11U, 15U, 19U, 23U,
+									 2U,  6U, 10U, 14U, 18U, 22U, 26U, 30U, 34U, 38U, 42U};
+const unsigned int DMR_C_TABLE[] = {46U, 50U, 54U, 58U, 62U, 66U, 70U,  3U,  7U, 11U, 15U, 19U, 23U,
 									27U, 31U, 35U, 39U, 43U, 47U, 51U, 55U, 59U, 63U, 67U, 71U};
 
 const unsigned int INTERLEAVE_TABLE_26_4[] = {
@@ -482,28 +482,13 @@ void CModeConv::putDMR(unsigned char* bytes)
 	assert(bytes != NULL);
 
 	unsigned int a1 = 0U, a2 = 0U, a3 = 0U;
-	unsigned int b1 = 0U, b2 = 0U, b3 = 0U;
-	unsigned int c1 = 0U, c2 = 0U, c3 = 0U;
-
 	unsigned int MASK = 0x800000U;
-	for (unsigned int i = 0U; i < 24U; i++) {
+	for (unsigned int i = 0U; i < 24U; i++, MASK >>= 1) {
 		unsigned int a1Pos = DMR_A_TABLE[i];
-		unsigned int b1Pos = DMR_B_TABLE[i];
-		unsigned int c1Pos = DMR_C_TABLE[i];
-
 		unsigned int a2Pos = a1Pos + 72U;
 		if (a2Pos >= 108U)
 			a2Pos += 48U;
-		unsigned int b2Pos = b1Pos + 72U;
-		if (b2Pos >= 108U)
-			b2Pos += 48U;
-		unsigned int c2Pos = c1Pos + 72U;
-		if (c2Pos >= 108U)
-			c2Pos += 48U;
-
 		unsigned int a3Pos = a1Pos + 192U;
-		unsigned int b3Pos = b1Pos + 192U;
-		unsigned int c3Pos = c1Pos + 192U;
 
 		if (READ_BIT(bytes, a1Pos))
 			a1 |= MASK;
@@ -511,20 +496,40 @@ void CModeConv::putDMR(unsigned char* bytes)
 			a2 |= MASK;
 		if (READ_BIT(bytes, a3Pos))
 			a3 |= MASK;
+	}
+
+	unsigned int b1 = 0U, b2 = 0U, b3 = 0U;
+	MASK = 0x400000U;
+	for (unsigned int i = 0U; i < 23U; i++, MASK >>= 1) {
+		unsigned int b1Pos = DMR_B_TABLE[i];
+		unsigned int b2Pos = b1Pos + 72U;
+		if (b2Pos >= 108U)
+			b2Pos += 48U;
+		unsigned int b3Pos = b1Pos + 192U;
+
 		if (READ_BIT(bytes, b1Pos))
 			b1 |= MASK;
 		if (READ_BIT(bytes, b2Pos))
 			b2 |= MASK;
 		if (READ_BIT(bytes, b3Pos))
 			b3 |= MASK;
+	}
+
+	unsigned int c1 = 0U, c2 = 0U, c3 = 0U;
+	MASK = 0x1000000U;
+	for (unsigned int i = 0U; i < 25U; i++, MASK >>= 1) {
+		unsigned int c1Pos = DMR_C_TABLE[i];
+		unsigned int c2Pos = c1Pos + 72U;
+		if (c2Pos >= 108U)
+			c2Pos += 48U;
+		unsigned int c3Pos = c1Pos + 192U;
+
 		if (READ_BIT(bytes, c1Pos))
 			c1 |= MASK;
 		if (READ_BIT(bytes, c2Pos))
 			c2 |= MASK;
 		if (READ_BIT(bytes, c3Pos))
 			c3 |= MASK;
-
-		MASK >>= 1;
 	}
 
 	putAMBE2YSF(a1, b1, c1);
@@ -542,10 +547,10 @@ void CModeConv::putAMBE2YSF(unsigned int a, unsigned int b, unsigned int dat_c)
 	unsigned int dat_a = CGolay24128::decode24128(a);
 
 	// The PRNG
-	unsigned int p = PRNG_TABLE[dat_a];
+	unsigned int p = PRNG_TABLE[dat_a] >> 1;
 	b ^= p;
 
-	unsigned int dat_b = CGolay24128::decode24128(b);
+	unsigned int dat_b = CGolay24128::decode23127(b);
 
 	for (unsigned int i = 0U; i < 12U; i++) {
 		bool s = (dat_a << (20U + i)) & 0x80000000U;
@@ -653,23 +658,28 @@ void CModeConv::putAMBE2DMR(unsigned int dat_a, unsigned int dat_b, unsigned int
 	unsigned char v_dmr[9U];
 
 	unsigned int a = CGolay24128::encode24128(dat_a);
-	unsigned int p = PRNG_TABLE[dat_a];
-	unsigned int b = CGolay24128::encode24128(dat_b);
+	unsigned int p = PRNG_TABLE[dat_a] >> 1;
+	unsigned int b = CGolay24128::encode23127(dat_b) >> 1;
 	b ^= p;
-	
+
 	unsigned int MASK = 0x800000U;
-	for (unsigned int i = 0U; i < 24U; i++) {
+	for (unsigned int i = 0U; i < 24U; i++, MASK >>= 1) {
 		unsigned int aPos = DMR_A_TABLE[i];
-		unsigned int bPos = DMR_B_TABLE[i];
-		unsigned int cPos = DMR_C_TABLE[i];
-
 		WRITE_BIT(v_dmr, aPos, a & MASK);
-		WRITE_BIT(v_dmr, bPos, b & MASK);
-		WRITE_BIT(v_dmr, cPos, dat_c & MASK);
-
-		MASK >>= 1;
 	}
-	
+
+	MASK = 0x400000U;
+	for (unsigned int i = 0U; i < 23U; i++, MASK >>= 1) {
+		unsigned int bPos = DMR_B_TABLE[i];
+		WRITE_BIT(v_dmr, bPos, b & MASK);
+	}
+
+	MASK = 0x1000000U;
+	for (unsigned int i = 0U; i < 25U; i++, MASK >>= 1) {
+		unsigned int cPos = DMR_C_TABLE[i];
+		WRITE_BIT(v_dmr, cPos, dat_c & MASK);
+	}
+
 	m_DMR.addData(&TAG_DATA, 1U);
 	m_DMR.addData(v_dmr, 9U);
 
