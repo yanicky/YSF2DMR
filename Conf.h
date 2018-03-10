@@ -34,6 +34,7 @@ public:
 
   // The YSF Network section
   std::string  getCallsign() const;
+  std::string  getSuffix() const;
   std::string  getDstAddress() const;
   unsigned int getDstPort() const;
   std::string  getLocalAddress() const;
@@ -91,6 +92,7 @@ public:
 private:
   std::string  m_file;
   std::string  m_callsign;
+  std::string  m_suffix;
   std::string  m_dstAddress;
   unsigned int m_dstPort;
   std::string  m_localAddress;

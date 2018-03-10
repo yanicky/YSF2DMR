@@ -98,6 +98,7 @@ int main(int argc, char** argv)
 
 CYSF2DMR::CYSF2DMR(const std::string& configFile) :
 m_callsign(),
+m_suffix(),
 m_conf(configFile),
 m_wiresX(NULL),
 m_dmrNetwork(NULL),
@@ -202,6 +203,7 @@ int CYSF2DMR::run()
 #endif
 
 	m_callsign = m_conf.getCallsign();
+	m_suffix   = m_conf.getSuffix();
 
 	bool debug               = m_conf.getDMRNetworkDebug();
 	in_addr dstAddress       = CUDPSocket::lookup(m_conf.getDstAddress());
@@ -242,7 +244,7 @@ int CYSF2DMR::run()
 
 	// CWiresX Control Object
 	if (m_enableWiresX) {
-		m_wiresX = new CWiresX(m_callsign, "L", m_ysfNetwork, m_TGList);
+		m_wiresX = new CWiresX(m_callsign, m_suffix, m_ysfNetwork, m_TGList);
 		m_dtmf = new CDTMF;
 	}
 
@@ -1004,7 +1006,7 @@ void CYSF2DMR::createGPS()
 	LogMessage("    Passworwd: %s", password.c_str());
 	LogMessage("    Description: %s", desc.c_str());
 
-	m_gps = new CGPS(m_callsign, "R", password, hostname, port);
+	m_gps = new CGPS(m_callsign, m_suffix, password, hostname, port);
 
 	unsigned int txFrequency = m_conf.getTxFrequency();
 	unsigned int rxFrequency = m_conf.getRxFrequency();
