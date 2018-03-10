@@ -18,8 +18,6 @@ DAEMON_OPTS=$CONFIG
 PGREP=/usr/bin/pgrep
 KILL=/bin/kill
 SLEEP=/bin/sleep
-USER=root
-GROUP=root
 
 # Pre-flight checks...
 test -x ${DAEMON_PATH}${DAEMON} || exit 1
