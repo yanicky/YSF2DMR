@@ -544,13 +544,12 @@ void CModeConv::putAMBE2YSF(unsigned int a, unsigned int b, unsigned int dat_c)
 	::memset(vch, 0U, 13U);
 	::memset(ysfFrame, 0, 13U);
 
-	unsigned int dat_a = CGolay24128::decode24128(a);
+	unsigned int dat_a = a >> 12;
 
 	// The PRNG
-	unsigned int p = PRNG_TABLE[dat_a] >> 1;
-	b ^= p;
+	b ^= (PRNG_TABLE[dat_a] >> 1);
 
-	unsigned int dat_b = CGolay24128::decode23127(b);
+	unsigned int dat_b = b >> 11;
 
 	for (unsigned int i = 0U; i < 12U; i++) {
 		bool s = (dat_a << (20U + i)) & 0x80000000U;
