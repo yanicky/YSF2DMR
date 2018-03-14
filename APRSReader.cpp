@@ -102,9 +102,9 @@ void CAPRSReader::formatGPS(unsigned char *buffer, int latitude, int longitude)
 
 	if (longitude < 0) {
 		longitude *= -1;
-		lon_sign = 0x30;
-	} else
 		lon_sign = 0x50;
+	} else
+		lon_sign = 0x30;
 
 	if (latitude < 0) {
 		lat_sign = 0x30;
@@ -115,14 +115,14 @@ void CAPRSReader::formatGPS(unsigned char *buffer, int latitude, int longitude)
 	// Latitude
 	int lat_dec = latitude / 10000;
 	int lat_uni = (latitude / 1000) % 10;
-	*(buffer + 5U) = lat_dec | 0x50;
-	*(buffer + 6U) = lat_uni | lon_sign;
+	*(buffer + 5U) = lat_dec | lat_sign;
+	*(buffer + 6U) = lat_uni | lat_sign;
 
 	int lat_min = (latitude - (lat_dec * 10 + lat_uni) * 1000) * 6;
 
 	int lat_min_dec = lat_min / 1000;
 	int lat_min_uni = (lat_min / 100) % 10;
-	*(buffer+7U) = lat_min_dec | 0x50;
+	*(buffer+7U) = lat_min_dec | lat_sign;
 	*(buffer+8U) = lat_min_uni | lat_sign;
 
 	int lat_frac = lat_min - (lat_min_dec * 10 + lat_min_uni) * 100;
@@ -147,8 +147,8 @@ void CAPRSReader::formatGPS(unsigned char *buffer, int latitude, int longitude)
 	}
 
 	*(buffer + 9U) = lat_frac_dec | a;
-	*(buffer + 10U) = lat_frac_uni | 0x50;
-	*(buffer + 11U) = b;
+	*(buffer + 10U) = lat_frac_uni | lon_sign;
+	*(buffer + 11U) = b | lon_sign;
 
 	int long_min = ((longitude - (lon_grad * 1000)) * 6) / 100;
 
