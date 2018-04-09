@@ -35,6 +35,7 @@
 #include "YSFPayload.h"
 #include "YSFNetwork.h"
 #include "YSFFICH.h"
+#include "Reflectors.h"
 #include "Thread.h"
 #include "Timer.h"
 #include "Sync.h"
@@ -99,13 +100,17 @@ private:
 	unsigned int     m_idUnlink;
 	FLCO             m_flcoUnlink;
 	bool             m_enableWiresX;
+	std::string      m_xlxmodule;
+	bool             m_xlxConnected;
+	CReflectors*     m_xlxReflectors;
+	unsigned int     m_xlxrefl;
 
 	bool createDMRNetwork();
 	void createGPS();
 	void SendDummyDMR(unsigned int srcid, unsigned int dstid, FLCO dmr_flco);
 	unsigned int findYSFID(std::string cs, bool showdst);
 	std::string getSrcYSF(const unsigned char* source);
-	
+	void writeXLXLink(unsigned int srcId, unsigned int dstId, CDMRNetwork* network);
 };
 
 #endif

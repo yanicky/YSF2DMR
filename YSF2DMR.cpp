@@ -37,6 +37,9 @@ const unsigned char dt2_temp[] = {0x00, 0x00, 0x00, 0x00, 0x6C, 0x20, 0x1C, 0x20
 #define DMR_FRAME_PER       55U
 #define YSF_FRAME_PER       90U
 
+#define XLX_SLOT            2U
+#define XLX_COLOR_CODE      3U
+
 #if defined(_WIN32) || defined(_WIN64)
 const char* DEFAULT_INI_FILE = "YSF2DMR.ini";
 #else
@@ -211,6 +214,10 @@ int CYSF2DMR::run()
 	std::string localAddress = m_conf.getLocalAddress();
 	unsigned int localPort   = m_conf.getLocalPort();
 
+	std::string fileName    = m_conf.getDMRXLXFile();
+	m_xlxReflectors = new CReflectors(fileName, 60U);
+	m_xlxReflectors->load();
+
 	m_ysfNetwork = new CYSFNetwork(localAddress, localPort, m_callsign, debug);
 	m_ysfNetwork->setDestination(dstAddress, dstPort);
 
@@ -288,6 +295,12 @@ int CYSF2DMR::run()
 
 		CDMRData tx_dmrdata;
 		unsigned int ms = stopWatch.elapsed();
+
+		if (m_dmrNetwork->isConnected() && !m_xlxmodule.empty() && !m_xlxConnected) {
+			writeXLXLink(m_srcid, m_dstid, m_dmrNetwork);
+			LogMessage("XLX, Linking to reflector XLX%03u, module %s", m_xlxrefl, m_xlxmodule.c_str());
+			m_xlxConnected = true;
+		}
 
 		if (m_wiresX != NULL) {
 			switch (TG_connect_state) {
@@ -963,6 +976,9 @@ int CYSF2DMR::run()
 			pollTimer.start();
 		}
 
+		if (m_xlxReflectors != NULL)
+			m_xlxReflectors->clock(ms);
+
 		if (ms < 5U)
 			CThread::sleep(5U);
 	}
@@ -987,6 +1003,9 @@ int CYSF2DMR::run()
 		delete m_wiresX;
 		delete m_dtmf;
 	}
+
+	if (m_xlxReflectors != NULL)
+		delete m_xlxReflectors;
 
 	::LogFinalise();
 
@@ -1146,6 +1165,8 @@ std::string CYSF2DMR::getSrcYSF(const unsigned char* buffer)
 bool CYSF2DMR::createDMRNetwork()
 {
 	std::string address  = m_conf.getDMRNetworkAddress();
+	m_xlxmodule          = m_conf.getDMRXLXModule();
+	m_xlxrefl            = m_conf.getDMRXLXReflector();
 	unsigned int port    = m_conf.getDMRNetworkPort();
 	unsigned int local   = m_conf.getDMRNetworkLocal();
 	std::string password = m_conf.getDMRNetworkPassword();
@@ -1158,12 +1179,26 @@ bool CYSF2DMR::createDMRNetwork()
 
 	m_srcHS = m_conf.getDMRId();
 	m_colorcode = 1U;
-	m_dstid = m_conf.getDMRDstId();
-	m_dmrpc = m_conf.getDMRPC();
 	m_TGList = m_conf.getDMRTGListFile();
 	m_idUnlink = m_conf.getDMRNetworkIDUnlink();
 	bool pcUnlink = m_conf.getDMRNetworkPCUnlink();
 	m_enableWiresX = m_conf.getEnableWiresX();
+
+	if (m_xlxmodule.empty()) {
+		m_dstid = m_conf.getDMRDstId();
+		m_dmrpc = m_conf.getDMRPC();
+	}
+	else {
+		const char *xlxmod = m_xlxmodule.c_str();
+		m_dstid = 4000 + xlxmod[0] - 64;
+		m_dmrpc = 0;
+
+		CReflector* reflector = m_xlxReflectors->find(m_xlxrefl);
+		if (reflector == NULL)
+			return false;
+		
+		address = reflector->m_address;
+	}
 
 	if (pcUnlink)
 		m_flcoUnlink = FLCO_USER_USER;
@@ -1183,8 +1218,14 @@ bool CYSF2DMR::createDMRNetwork()
 	LogMessage("DMR Network Parameters");
 	LogMessage("    ID: %u", m_srcHS);
 	LogMessage("    Default SrcID: %u", m_defsrcid);
-	LogMessage("    Startup DstID: %s%u", m_dmrpc ? "" : "TG ", m_dstid);
-	LogMessage("    Address: %s", address.c_str());
+	if (!m_xlxmodule.empty()) {
+		LogMessage("    XLX Reflector: %d", m_xlxrefl);
+		LogMessage("    XLX Module: %s (%d)", m_xlxmodule.c_str(), m_dstid);
+	}
+	else {
+		LogMessage("    Startup DstID: %s%u", m_dmrpc ? "" : "TG ", m_dstid);
+		LogMessage("    Address: %s", address.c_str());
+	}
 	LogMessage("    Port: %u", port);
 	LogMessage("    Send %s%u Disconect: %s", pcUnlink ? "" : "TG ", m_idUnlink, (enableUnlink) ? "Yes":"No");
 	LogMessage("    TGList file: %s", m_TGList.c_str());
@@ -1237,3 +1278,59 @@ bool CYSF2DMR::createDMRNetwork()
 
 	return true;
 }
+
+void CYSF2DMR::writeXLXLink(unsigned int srcId, unsigned int dstId, CDMRNetwork* network)
+{
+	assert(network != NULL);
+
+	unsigned int streamId = ::rand() + 1U;
+
+	CDMRData data;
+
+	data.setSlotNo(XLX_SLOT);
+	data.setFLCO(FLCO_USER_USER);
+	data.setSrcId(srcId);
+	data.setDstId(dstId);
+	data.setDataType(DT_VOICE_LC_HEADER);
+	data.setN(0U);
+	data.setStreamId(streamId);
+
+	unsigned char buffer[DMR_FRAME_LENGTH_BYTES];
+
+	CDMRLC lc;
+	lc.setSrcId(srcId);
+	lc.setDstId(dstId);
+	lc.setFLCO(FLCO_USER_USER);
+
+	CDMRFullLC fullLC;
+	fullLC.encode(lc, buffer, DT_VOICE_LC_HEADER);
+
+	CDMRSlotType slotType;
+	slotType.setColorCode(XLX_COLOR_CODE);
+	slotType.setDataType(DT_VOICE_LC_HEADER);
+	slotType.getData(buffer);
+
+	CSync::addDMRDataSync(buffer, true);
+
+	data.setData(buffer);
+
+	for (unsigned int i = 0U; i < 3U; i++) {
+		data.setSeqNo(i);
+		network->write(data);
+	}
+
+	data.setDataType(DT_TERMINATOR_WITH_LC);
+
+	fullLC.encode(lc, buffer, DT_TERMINATOR_WITH_LC);
+
+	slotType.setDataType(DT_TERMINATOR_WITH_LC);
+	slotType.getData(buffer);
+
+	data.setData(buffer);
+
+	for (unsigned int i = 0U; i < 2U; i++) {
+		data.setSeqNo(i + 3U);
+		network->write(data);
+	}
+}
+
