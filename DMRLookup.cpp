@@ -109,6 +109,8 @@ unsigned int CDMRLookup::findID(std::string cs)
 {
 	unsigned int dmrID;
 
+	m_mutex.lock();
+
 	try {
 		dmrID = m_cstable.at(cs);
 	} catch (...) {
