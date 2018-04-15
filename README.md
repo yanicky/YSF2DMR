@@ -18,4 +18,16 @@ YSF2DMR looks for DMR ID of the YSF callsign in the DMRIds.dat file, in case of 
 
 You can also use the Wires-X function of your radio to select any DMR TG ID (or Reflector). In this case, you need to connect YSF2DMR directly to MMDVMHost in order to process correctly all Wires-X commands. Please edit the file TGList.txt and enter only your preferred DMR ID list. Use the disconnect function of your YSF radio (hold *) to send a call to TG 4000 for example.
 
+If you want to connect directly to a XLX reflector (with DMR support), you only need to uncomment ([DMR Network] section):
+
+XLXFile=XLXHosts.txt
+XLXReflector=950
+XLXModule=D
+
+and replace XLXReflector and XLXModule according your preferences. Also, you need to configure the DMR port according the XLX reflector port, for example:
+
+Port=62030
+
+StartupDstId, StartupPC and Address parameters don't care in XLX mode.
+
 This software is licenced under the GPL v2 and is intended for amateur and educational use only. Use of this software for commercial purposes is strictly forbidden.
