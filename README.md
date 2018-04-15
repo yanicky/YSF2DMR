@@ -20,13 +20,13 @@ You can also use the Wires-X function of your radio to select any DMR TG ID (or 
 
 If you want to connect directly to a XLX reflector (with DMR support), you only need to uncomment ([DMR Network] section):
 
-XLXFile=XLXHosts.txt
-XLXReflector=950
-XLXModule=D
+    XLXFile=XLXHosts.txt
+    XLXReflector=950
+    XLXModule=D
 
 and replace XLXReflector and XLXModule according your preferences. Also, you need to configure the DMR port according the XLX reflector port, for example:
 
-Port=62030
+    Port=62030
 
 StartupDstId, StartupPC and Address parameters don't care in XLX mode.
 
