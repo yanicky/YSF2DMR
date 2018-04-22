@@ -1115,8 +1115,10 @@ unsigned int CYSF2DMR::findYSFID(std::string cs, bool showdst)
 	int mid1 = cs.find_last_of('-');
 	int mid2 = cs.find_last_of('/');
 	int last = cs.find_last_not_of(' ');
-
-	if (mid1 == -1 && mid2 == -1)
+	
+	if (mid1 == -1 && mid2 == -1 && first == -1 && last == -1)
+		cstrim = "N0CALL";
+	else if (mid1 == -1 && mid2 == -1)
 		cstrim = cs.substr(first, (last - first + 1));
 	else if (mid1 > first)
 		cstrim = cs.substr(first, (mid1 - first));
