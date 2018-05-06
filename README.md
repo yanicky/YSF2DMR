@@ -2,7 +2,7 @@
 
 This is the source code of YSF2DMR, a software for digital voice conversion from Yaesu System Fusion to DMR digital mode, based on Jonathan G4KLX's [MMDVM](https://github.com/g4klx) software.
 
-You can use this software and YSFGateway at the same time, with the default YSF UDP ports (42000 and 42013). In this case, you can select the pseudo YSF2DMR reflector in the Wires-X list provided by YSFGateway.
+You can use this software and YSFGateway at the same time, with the default YSF UDP ports (42000 and 42013). In this case, you can select the pseudo "YSF2DMR" reflector in the Wires-X list provided by YSFGateway.
 
 Also, you can connect directly with MMDVMHost, changing the following ports in [YSF Network] section (YSF2DMR.ini):
 
