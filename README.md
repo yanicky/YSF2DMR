@@ -40,19 +40,22 @@ YSFReflector <-> YSF2DMR <-> any DMR Network
 
 Install the YSF2DMR software at the same server where YSFReflector software is located. Configure your [DMR Network] section (YSF2DMR.ini) as usual, depending on your preferred DMR network. Then, you only need to match the YSFReflector UDP port (Port in [Network], YSFReflector.ini) to YSF UDP port (DstPort in [YSF Network], YSF2DMR.ini).
 
-For example, a common UDP port for a YSFReflector:
+For example, a common UDP port in YSFReflector.ini:
 
     [Network]
     Port=42000
 
-Then you need to configure YSF2DMR.ini:
+Then you need to configure YSF2DMR.ini (example):
 
     [YSF Network]
+    Callsign=CE1ABC
+    Suffix=ND
     DstAddress=127.0.0.1
     DstPort=42000
     LocalAddress=127.0.0.1
     LocalPort=42012
     EnableWiresX=0
+    Daemon=0
 
 You could also see at "service" folder of this project to see an example of Systemd automatic startup for YSF2DMR. Please see [README](service/README.md) for more information about installation.
 
